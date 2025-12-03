@@ -52,7 +52,7 @@ export function AnnouncementCard({
   const Icon = config.icon;
 
   return (
-    <Card className='mb-4 border-l-4 border-l-slate-200 shadow-sm transition-all hover:border-l-blue-900 dark:border-l-slate-800 dark:hover:border-l-blue-500'>
+    <Card className='mb-4 border-l-4 border-l-slate-200 bg-white shadow-sm transition-all hover:border-l-blue-900 dark:border-slate-800 dark:border-l-slate-800 dark:bg-slate-900 dark:hover:border-l-blue-500'>
       <CardHeader className='flex flex-row items-start justify-between space-y-0 pb-2'>
         <div className='flex gap-2'>
           {/* Category Icon */}
