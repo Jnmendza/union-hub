@@ -1,4 +1,6 @@
+"use client";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "next-themes";
 import {
   User,
   Settings,
@@ -50,12 +52,22 @@ function SettingsRow({
           {label}
         </span>
       </div>
-      {value && <span className='text-xs text-slate-400'>{value}</span>}
+      {value && (
+        <span suppressHydrationWarning className='text-xs text-slate-400'>
+          {value}
+        </span>
+      )}
     </button>
   );
 }
 
 export default function ProfilePage() {
+  const { setTheme, theme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
   return (
     <div className='min-h-screen bg-white pb-24 dark:bg-slate-950'>
       {/* Header */}
@@ -87,6 +99,14 @@ export default function ProfilePage() {
           <div className='overflow-hidden rounded-xl border border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950'>
             <SettingsRow icon={User} label='Personal Info' />
             <SettingsRow icon={Bell} label='Notifications' value='On' />
+            {/* Make this row clickable for the toggle */}
+            <div onClick={toggleTheme} className='cursor-pointer'>
+              <SettingsRow
+                icon={Bell} // You might want to change this icon to 'Moon' or 'Sun'
+                label='Appearance'
+                value={theme === "dark" ? "Dark Mode" : "Light Mode"}
+              />
+            </div>
             <SettingsRow
               icon={CreditCard}
               label='Membership Dues'
