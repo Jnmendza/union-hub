@@ -33,10 +33,7 @@ export async function signup(formData: FormData) {
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-
-  // Extract a name from email (e.g., "jonathan" from "jonathan@email.com")
-  // In a real app, you'd add a "Name" input field to the form.
-  const defaultName = email.split("@")[0];
+  const fullName = formData.get("name") as string;
 
   // 1. Sign up in Supabase Auth
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -56,7 +53,7 @@ export async function signup(formData: FormData) {
         data: {
           id: authData.user.id, // CRITICAL: Use the SAME UUID as Supabase Auth
           email: authData.user.email!,
-          name: defaultName,
+          name: fullName,
           role: "MEMBER", // Default role
           tier: "FREE", // Default tier
         },
