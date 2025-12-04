@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { login, signup } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff, Check, X, AlertCircle, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Check, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
