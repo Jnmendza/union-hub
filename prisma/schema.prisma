@@ -21,12 +21,14 @@ model User {
   email     String   @unique
   name      String?
   avatarUrl String?
+  memberId  String?  @unique
   role      Role     @default(MEMBER)
   tier      Tier     @default(FREE)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relationships
+  groups        Group[]
   messages      Message[]
   announcements Announcement[] // If they are an admin
 }
@@ -39,7 +41,8 @@ model Group {
   type        GroupType @default(PUBLIC)
   createdAt   DateTime @default(now())
 
-  messages Message[]
+  members     User[]
+  messages    Message[]
 }
 
 // 3. MESSAGES (Chat)
