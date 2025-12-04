@@ -3,52 +3,43 @@ import {
   AnnouncementCard,
   AnnouncementCategory,
 } from "./(components)/announcement-card";
+import { prisma } from "@/lib/prisma"; // Import Prisma
+import { createClient } from "@/utils/supabase/server"; // For the greeting
 
-// Mock Data (Simulating a Database Response)
-const ANNOUNCEMENTS = [
-  {
-    id: 1,
-    title: "Change to Tailgate Location",
-    author: "Elena (Board)",
-    date: "2 hours ago",
-    category: "urgent" as AnnouncementCategory,
-    content:
-      "Due to construction in Lot B, we are moving the main tailgate to Lot C (The Bus Lot). Look for the blue flags.",
-  },
-  {
-    id: 2,
-    title: "Playoff Tifo Night: Volunteers Needed",
-    author: "Mike (Chavos)",
-    date: "Yesterday",
-    category: "event" as AnnouncementCategory,
-    content:
-      "We need 15 people to help paint the new tifo this Thursday at the warehouse. Pizza provided!",
-  },
-  {
-    id: 3,
-    title: "New Scarf Drop",
-    author: "Merch Team",
-    date: "Oct 20",
-    category: "merch" as AnnouncementCategory,
-    content:
-      "The 'Frontera Forever' winter scarves are now available for pre-order in the Vault.",
-  },
-];
+// 1. Convert to Async Component
+export default async function Home() {
+  // Get User Name for Greeting
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function Home() {
+  // Optional: Fetch user profile to get their real name (or fallback to Auth email)
+  let displayName = "Supporter";
+  if (user) {
+    const profile = await prisma.user.findUnique({ where: { id: user.id } });
+    displayName = profile?.name?.split(" ")[0] || "Supporter";
+  }
+
+  // 2. Fetch Real Announcements from DB
+  const announcements = await prisma.announcement.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { author: true }, // Include author details if you want their name
+  });
+
   return (
     <div className='min-h-screen bg-slate-50 px-4 pb-24 pt-6 dark:bg-slate-950'>
       {/* Header Greeting */}
       <div className='mb-6 px-1'>
         <h1 className='text-2xl font-bold text-slate-900 dark:text-white'>
-          Welcome, Jonathan
+          Welcome, {displayName}
         </h1>
         <p className='text-sm text-slate-500'>
           Let&apos;s make some noise today.
         </p>
       </div>
 
-      {/* The Widget */}
+      {/* The Widget (Still Static for now, but that's okay) */}
       <section className='mb-8'>
         <MatchWidget
           opponentName='LA Galaxy'
@@ -72,16 +63,29 @@ export default function Home() {
         </div>
 
         <div className='flex flex-col gap-2'>
-          {ANNOUNCEMENTS.map((post) => (
+          {/* 3. Map through REAL data */}
+          {announcements.map((post) => (
             <AnnouncementCard
               key={post.id}
               title={post.title}
-              author={post.author}
-              date={post.date}
-              category={post.category}
+              // Format date nicely (e.g. "Oct 24")
+              date={new Date(post.createdAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+              author={post.author.name || "Admin"}
+              // We need to cast the category string to the component's expected type
+              // or ensure the DB Enums match exactly.
+              category={post.category.toLowerCase() as AnnouncementCategory}
               content={post.content}
             />
           ))}
+
+          {announcements.length === 0 && (
+            <p className='text-center text-sm text-slate-400 py-4'>
+              No updates yet.
+            </p>
+          )}
         </div>
       </section>
     </div>
