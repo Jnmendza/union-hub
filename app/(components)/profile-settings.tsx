@@ -11,6 +11,7 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logout } from "../(auth)/login/actions";
 
 // Interface for the reusable row
 interface SettingsRowProps {
@@ -18,6 +19,7 @@ interface SettingsRowProps {
   label: string;
   value?: string;
   destructive?: boolean;
+  onClick?: () => void;
 }
 
 function SettingsRow({
@@ -25,9 +27,13 @@ function SettingsRow({
   label,
   value,
   destructive,
+  onClick,
 }: SettingsRowProps) {
   return (
-    <button className='flex w-full items-center justify-between px-4 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900'>
+    <button
+      onClick={onClick}
+      className='flex w-full items-center justify-between px-4 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900'
+    >
       <div className='flex items-center gap-3'>
         <div
           className={cn(
@@ -101,7 +107,12 @@ export function ProfileSettings() {
         <div className='overflow-hidden rounded-xl border border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950'>
           <SettingsRow icon={ShieldCheck} label='Password & Security' />
           <div className='h-px bg-slate-100 dark:bg-slate-800' />
-          <SettingsRow icon={LogOut} label='Log Out' destructive />
+          <SettingsRow
+            icon={LogOut}
+            label='Log Out'
+            destructive
+            onClick={() => logout()}
+          />
         </div>
       </div>
     </>
