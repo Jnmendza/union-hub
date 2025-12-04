@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, Suspense } from "react"; // Added Suspense
+import { useState, useTransition, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { login, signup } from "./actions";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,10 @@ import { Eye, EyeOff, Check, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-// 1. Rename your existing component to "LoginForm" (not default export)
 function LoginForm() {
   const [view, setView] = useState<"login" | "signup">("login");
   const [isPending, startTransition] = useTransition();
 
-  // Form State
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -28,11 +26,12 @@ function LoginForm() {
     password?: string;
     confirmPassword?: string;
     name?: string;
+    server?: string; // ADDED: To hold the backend error
   }>({});
 
-  // This hook causes the build error if not wrapped in Suspense
+  // We can still keep this to catch middleware redirects, but we use state for form errors now
   const searchParams = useSearchParams();
-  const serverError = searchParams.get("message");
+  const paramError = searchParams.get("message");
 
   const rules = [
     { label: "At least 8 characters", valid: password.length >= 8 },
@@ -81,23 +80,37 @@ function LoginForm() {
 
   const handleSubmit = (action: "login" | "signup") => {
     if (!validateForm()) return;
+    setErrors({}); // Clear previous errors
 
     const formData = new FormData();
     formData.append("email", email);
     formData.append("password", password);
     if (view === "signup") formData.append("name", name);
 
-    startTransition(() => {
+    startTransition(async () => {
+      let result;
+
+      // Call the action
       if (action === "login") {
-        login(formData);
+        result = await login(formData);
       } else {
-        signup(formData);
+        result = await signup(formData);
       }
+
+      // If the action returned an error, set it in state
+      if (result?.error) {
+        setErrors((prev) => ({ ...prev, server: result.error }));
+      }
+
+      // If success, the redirect happens automatically and this component unmounts
     });
   };
 
   const inputStyles =
     "bg-slate-50 text-slate-900 placeholder:text-slate-500/50 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-400/30";
+
+  // Combine server error from params OR from state
+  const displayError = errors.server || paramError;
 
   return (
     <div className='flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4 dark:bg-slate-950'>
@@ -128,7 +141,7 @@ function LoginForm() {
               <Input
                 id='name'
                 type='text'
-                placeholder='Enter full name'
+                placeholder='Jonathan Mendoza'
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className={cn(
@@ -294,7 +307,8 @@ function LoginForm() {
               <Button
                 onClick={() => handleSubmit("signup")}
                 disabled={isPending}
-                className='w-full bg-blue-900 hover:bg-blue-800 text-white'
+                className='w-full border-slate-200 text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:bg-transparent dark:text-white dark:hover:bg-slate-800 dark:hover:text-white'
+                variant='outline'
               >
                 {isPending ? (
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
@@ -305,17 +319,17 @@ function LoginForm() {
             )}
           </div>
 
-          {serverError && (
-            <div className='flex items-center gap-2 rounded-md bg-red-50 p-3 text-red-600 dark:bg-red-900/20 dark:text-red-300'>
+          {displayError && (
+            <div className='flex items-center gap-2 rounded-md bg-red-50 p-3 text-red-600 dark:bg-red-900/20 dark:text-red-300 animate-in slide-in-from-bottom-2'>
               <AlertCircle className='h-4 w-4 shrink-0' />
-              <p className='text-xs'>{serverError}</p>
+              <p className='text-xs'>{displayError}</p>
             </div>
           )}
         </form>
 
         <div className='text-xs text-slate-400'>
           {view === "login" ? (
-            <p>
+            <p className='text-center'>
               Don&apos;t have an account?{" "}
               <button
                 onClick={() => {
@@ -328,7 +342,7 @@ function LoginForm() {
               </button>
             </p>
           ) : (
-            <p>
+            <p className='text-center'>
               Already have an account?{" "}
               <button
                 onClick={() => {
@@ -343,7 +357,7 @@ function LoginForm() {
           )}
         </div>
 
-        <div className='pt-4 text-xs text-slate-300'>
+        <div className='pt-4 text-xs text-slate-300 text-center'>
           <Link href='/' className='hover:text-slate-500'>
             Back to Home
           </Link>
@@ -353,10 +367,8 @@ function LoginForm() {
   );
 }
 
-// 2. The Main Page Component wraps the Form in Suspense
 export default function LoginPage() {
   return (
-    // Fallback doesn't strictly matter as this loads instantly usually, but creates a safe boundary
     <Suspense
       fallback={
         <div className='flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950'>
