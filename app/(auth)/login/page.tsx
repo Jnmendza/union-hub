@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, Suspense } from "react"; // Added Suspense
 import { useSearchParams } from "next/navigation";
 import { login, signup } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Check, X, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export default function LoginPage() {
+// 1. Rename your existing component to "LoginForm" (not default export)
+function LoginForm() {
   const [view, setView] = useState<"login" | "signup">("login");
   const [isPending, startTransition] = useTransition();
 
@@ -22,7 +23,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
 
-  // Validation State
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
@@ -30,11 +30,10 @@ export default function LoginPage() {
     name?: string;
   }>({});
 
-  // URL Error Messages (Server Errors)
+  // This hook causes the build error if not wrapped in Suspense
   const searchParams = useSearchParams();
   const serverError = searchParams.get("message");
 
-  // Password Rules (Best Practice)
   const rules = [
     { label: "At least 8 characters", valid: password.length >= 8 },
     { label: "Contains a number", valid: /\d/.test(password) },
@@ -48,7 +47,6 @@ export default function LoginPage() {
     const newErrors: typeof errors = {};
     let isValid = true;
 
-    // Email Validation
     if (!email) {
       newErrors.email = "Email is required";
       isValid = false;
@@ -57,25 +55,20 @@ export default function LoginPage() {
       isValid = false;
     }
 
-    // Name Validation (Signup Only)
     if (view === "signup" && !name.trim()) {
       newErrors.name = "Full name is required";
       isValid = false;
     }
 
-    // Password Validation
     if (!password) {
       newErrors.password = "Password is required";
       isValid = false;
     } else if (view === "signup") {
-      // Enforce strict rules on signup only
       const allRulesMet = rules.every((r) => r.valid);
       if (!allRulesMet) {
         newErrors.password = "Password does not meet requirements";
         isValid = false;
       }
-
-      // Confirm Password Check
       if (password !== confirmPassword) {
         newErrors.confirmPassword = "Passwords do not match";
         isValid = false;
@@ -103,16 +96,12 @@ export default function LoginPage() {
     });
   };
 
-  // SHARED INPUT STYLES
-  // placeholder:text-slate-500/50 -> Light mode placeholder at 50% opacity
-  // dark:placeholder:text-slate-400/30 -> Dark mode placeholder at 30% opacity
   const inputStyles =
     "bg-slate-50 text-slate-900 placeholder:text-slate-500/50 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-400/30";
 
   return (
     <div className='flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4 dark:bg-slate-950'>
       <div className='w-full max-w-sm space-y-6 rounded-xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-800 dark:bg-slate-950'>
-        {/* Header */}
         <div className='space-y-2 text-center'>
           <h1 className='text-2xl font-bold text-slate-900 dark:text-white'>
             Union Hub
@@ -128,7 +117,6 @@ export default function LoginPage() {
           className='space-y-4 text-left'
           onSubmit={(e) => e.preventDefault()}
         >
-          {/* Full Name (Signup Only) */}
           {view === "signup" && (
             <div className='space-y-1 animate-in fade-in slide-in-from-top-2'>
               <label
@@ -140,7 +128,7 @@ export default function LoginPage() {
               <Input
                 id='name'
                 type='text'
-                placeholder='Type full name'
+                placeholder='Enter full name'
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className={cn(
@@ -156,7 +144,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Email */}
           <div className='space-y-1'>
             <label
               className='text-xs font-medium text-slate-500'
@@ -182,7 +169,6 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Password with Toggle & Strength */}
           <div className='space-y-1'>
             <label
               className='text-xs font-medium text-slate-500'
@@ -221,7 +207,6 @@ export default function LoginPage() {
               </p>
             )}
 
-            {/* Confirm Password (Signup Only) */}
             {view === "signup" && (
               <div className='mt-4 space-y-1 animate-in fade-in slide-in-from-top-2'>
                 <label
@@ -264,7 +249,6 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Password Requirements Checklist (Only show on Signup) */}
             {view === "signup" && (
               <div className='mt-2 space-y-1 rounded-lg border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/50'>
                 <p className='mb-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider'>
@@ -366,5 +350,21 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 2. The Main Page Component wraps the Form in Suspense
+export default function LoginPage() {
+  return (
+    // Fallback doesn't strictly matter as this loads instantly usually, but creates a safe boundary
+    <Suspense
+      fallback={
+        <div className='flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950'>
+          <Loader2 className='h-8 w-8 animate-spin text-slate-400' />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
