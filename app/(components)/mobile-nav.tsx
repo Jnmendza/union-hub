@@ -32,7 +32,7 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className='fixed bottom-0 left-0 z-50 w-full border-t border-slate-200 bg-white pb-safe pt-2 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] dark:border-slate-800 dark:bg-slate-950'>
+    <nav className='w-full border-t border-slate-200 bg-white pb-safe pt-2 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] dark:border-slate-800 dark:bg-slate-950'>
       {/* 'pb-safe' is a utility for iPhone Home Bar spacing (requires tailwind-safe-area plugin), 
          otherwise use 'pb-4' or 'pb-6' for manual spacing.
       */}

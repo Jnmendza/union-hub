@@ -1,145 +1,271 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Send, Paperclip, MoreVertical } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  doc, 
+  getDoc, 
+  collection, 
+  addDoc, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  serverTimestamp,
+  Timestamp 
+} from 'firebase/firestore';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { useParams, useRouter } from 'next/navigation';
+import { ChevronLeft, Settings, MessageSquare, Home, Lock, User, Send } from 'lucide-react';
 
-// Mock Messages Data
-const MOCK_MESSAGES = [
-  {
-    id: 1,
-    sender: "Mike",
-    text: "Everyone meeting at Lot B?",
-    time: "10:00 AM",
-    isMe: false,
-  },
-  {
-    id: 2,
-    sender: "Sarah",
-    text: "Yeah, we have the tents set up already.",
-    time: "10:02 AM",
-    isMe: false,
-  },
-  {
-    id: 3,
-    sender: "Me",
-    text: "On my way! Bringing extra ice.",
-    time: "10:05 AM",
-    isMe: true,
-  },
-  {
-    id: 4,
-    sender: "Mike",
-    text: "Perfect. We need it.",
-    time: "10:06 AM",
-    isMe: false,
-  },
-  { id: 5, sender: "Me", text: "See you in 10.", time: "10:07 AM", isMe: true },
-];
+// --- Types ---
+interface Group {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  members: string[];
+}
 
-export default function ChatRoomPage() {
-  const params = useParams();
+interface Message {
+  id: string;
+  text: string;
+  senderId: string;
+  createdAt: Timestamp;
+}
+
+// --- Components ---
+
+const BottomNav = ({ activeTab }: { activeTab: string }) => {
   const router = useRouter();
-  const groupId = params.id as string; // e.g., "chavos"
-
-  const [message, setMessage] = useState("");
+  
+  const navItems = [
+    { id: 'home', icon: Home, label: 'Home', path: '/' },
+    { id: 'groups', icon: User, label: 'Groups', path: '/groups' },
+    { id: 'vault', icon: Lock, label: 'The Vault', path: '/vault' },
+    { id: 'profile', icon: User, label: 'My ID', path: '/profile' },
+  ];
 
   return (
-    <div className='relative z-50 flex h-screen flex-col bg-slate-50 dark:bg-slate-950'>
-      {/* 1. Chat Header (Fixed Top) */}
-      <header className='sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90'>
-        <div className='flex items-center gap-3'>
-          <Button
-            variant='ghost'
-            size='icon'
-            onClick={() => router.back()}
-            className='-ml-2'
-          >
-            <ArrowLeft className='h-5 w-5 text-slate-600' />
-          </Button>
-          <div className='flex flex-col'>
-            <h1 className='text-sm font-bold text-slate-900 capitalize dark:text-white'>
-              {groupId.replace("-", " ")}
-            </h1>
-            <span className='text-[10px] text-slate-500'>
-              24 members online
-            </span>
-          </div>
+    <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 pb-safe pt-2 px-6 flex justify-between items-center z-50 h-20">
+      {navItems.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => router.push(item.path)}
+          className={`flex flex-col items-center gap-1 transition-colors duration-200 ${
+            activeTab === item.id ? 'text-blue-500' : 'text-slate-500 hover:text-slate-300'
+          }`}
+        >
+          <item.icon size={24} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+          <span className="text-xs font-medium">{item.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+export default function GroupDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const groupId = typeof params?.id === 'string' ? params.id : '';
+  const bottomRef = useRef<HTMLDivElement>(null); // Ref for auto-scrolling
+  
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [group, setGroup] = useState<Group | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // 1. Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Fetch Group Details
+  useEffect(() => {
+    const fetchGroup = async () => {
+      if (!groupId) return;
+      try {
+        const docRef = doc(db, 'groups', groupId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          setGroup({ id: docSnap.id, ...docSnap.data() } as Group);
+        } else {
+          setGroup(null);
+        }
+      } catch (error) {
+        console.error("Error fetching group:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGroup();
+  }, [groupId]);
+
+  // 3. Real-time Messages Listener
+  useEffect(() => {
+    if (!groupId) return;
+
+    // Listen to the 'messages' sub-collection, ordered by time
+    const q = query(
+      collection(db, 'groups', groupId, 'messages'),
+      orderBy('createdAt', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Message[];
+      setMessages(msgs);
+      
+      // Auto-scroll to bottom when new messages arrive
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    });
+
+    return () => unsubscribe();
+  }, [groupId]);
+
+  // 4. Send Message Handler
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    
+    if (!newMessage.trim() || !user || !groupId) return;
+
+    try {
+      // Add message to sub-collection
+      await addDoc(collection(db, 'groups', groupId, 'messages'), {
+        text: newMessage,
+        senderId: user.uid,
+        createdAt: serverTimestamp(), // Server-side time is safer
+      });
+      setNewMessage(''); // Clear input
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-slate-950 text-slate-500">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+        <p>Loading group...</p>
+      </div>
+    );
+  }
+
+  if (!group) {
+    return (
+      <div className="flex flex-col h-screen bg-slate-950 p-6">
+         <button onClick={() => router.back()} className="self-start flex items-center gap-2 text-slate-400 mb-8 hover:text-white">
+          <ChevronLeft size={20} /> Back
+        </button>
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <h2 className="text-xl font-bold text-white mb-2">Group not found</h2>
         </div>
-        <Button variant='ghost' size='icon'>
-          <MoreVertical className='h-5 w-5 text-slate-500' />
-        </Button>
-      </header>
+      </div>
+    );
+  }
 
-      {/* 2. Message List (Scrollable Middle) */}
-      <div className='flex-1 overflow-y-auto p-4 pb-20'>
-        {/* pb-20 is crucial to prevent the last message from being hidden behind the input bar */}
+  return (
+    <div className="fixed inset-0 flex flex-col bg-slate-950 pb-20">
+      
+      {/* Hide Scrollbar Style */}
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
 
-        <div className='flex flex-col gap-4'>
-          {MOCK_MESSAGES.map((msg) => (
-            <div
-              key={msg.id}
-              className={cn(
-                "flex w-max max-w-[75%] flex-col rounded-2xl px-4 py-2 text-sm shadow-sm",
-                msg.isMe
-                  ? "self-end bg-blue-600 text-white rounded-br-none" // My Message (Right)
-                  : "self-start bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 rounded-bl-none" // Their Message (Left)
-              )}
-            >
-              {!msg.isMe && (
-                <span className='mb-1 text-[10px] font-bold text-slate-400 dark:text-slate-500'>
-                  {msg.sender}
-                </span>
-              )}
-              <span>{msg.text}</span>
-              <span
-                className={cn(
-                  "mt-1 self-end text-[10px]",
-                  msg.isMe ? "text-blue-200" : "text-slate-400"
-                )}
-              >
-                {msg.time}
-              </span>
+      {/* Header */}
+      <div className="bg-slate-950 border-b border-slate-800 p-3 flex items-center gap-3 shrink-0">
+        <button 
+          onClick={() => router.back()}
+          className="p-2 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0 ${group.color || 'bg-blue-600'}`}>
+            {group.name.substring(0, 2).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+            <h2 className="text-white font-bold truncate">{group.name}</h2>
+            <p className="text-xs text-slate-400 truncate">{group.members?.length || 1} members</p>
+        </div>
+        <button className="p-2 text-slate-400 hover:text-white">
+            <Settings size={20} />
+        </button>
+      </div>
+
+      {/* Chat Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-none no-scrollbar">
+        {/* Welcome Message */}
+        <div className="flex flex-col items-center py-8 text-center">
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white mb-4 ${group.color || 'bg-blue-600'}`}>
+                {group.name.substring(0, 2).toUpperCase()}
             </div>
-          ))}
+            <h3 className="text-white font-bold text-lg">Welcome to {group.name}</h3>
+            <p className="text-slate-400 text-sm mt-1 max-w-xs">{group.description}</p>
         </div>
+
+        {/* Real Messages List */}
+        {messages.map((msg) => {
+          const isMe = user?.uid === msg.senderId;
+          return (
+            <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
+              {/* Avatar (Only show for others) */}
+              {!isMe && (
+                <div className="w-8 h-8 rounded-full bg-slate-700 flex-shrink-0 flex items-center justify-center text-xs text-white font-bold">
+                  ?
+                </div>
+              )}
+              
+              {/* Message Bubble */}
+              <div className={`
+                p-3 rounded-2xl text-sm max-w-[80%] break-words
+                ${isMe 
+                  ? 'bg-blue-600 text-white rounded-tr-none' 
+                  : 'bg-slate-800 text-slate-200 rounded-tl-none'}
+              `}>
+                {msg.text}
+              </div>
+            </div>
+          );
+        })}
+        
+        {/* Invisible element to auto-scroll to */}
+        <div ref={bottomRef} />
       </div>
 
-      {/* 3. Input Area (Fixed Bottom) */}
-      <div className='fixed bottom-0 z-20 w-full max-w-md border-t border-slate-200 bg-white px-4 py-3 pb-safe dark:border-slate-800 dark:bg-slate-950'>
-        <div className='flex items-center gap-2'>
-          <Button
-            variant='ghost'
-            size='icon'
-            className='shrink-0 text-slate-400'
-          >
-            <Paperclip className='h-5 w-5' />
-          </Button>
-
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder='Message...'
-            className='rounded-full border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900'
-          />
-
-          <Button
-            size='icon'
-            className={cn(
-              "shrink-0 rounded-full transition-all",
-              message
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-slate-200 text-slate-400"
-            )}
-            disabled={!message}
-          >
-            <Send className='h-4 w-4' />
-          </Button>
+      {/* Input Area */}
+      <form 
+        onSubmit={handleSendMessage}
+        className="p-4 bg-slate-900 border-t border-slate-800 shrink-0"
+      >
+        <div className="flex gap-2">
+            <input 
+                type="text" 
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Message..." 
+                className="flex-1 bg-slate-800 text-white px-4 py-3 rounded-full border border-slate-700 focus:border-blue-500 focus:outline-none"
+            />
+             <button 
+               type="submit"
+               disabled={!newMessage.trim()}
+               className="p-3 text-white bg-blue-600 rounded-full hover:bg-blue-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+             >
+                {newMessage.trim() ? <Send size={20} /> : <MessageSquare size={20} />}
+            </button>
         </div>
-      </div>
+      </form>
+
+      {/* Navigation */}
+      <BottomNav activeTab="groups" />
     </div>
   );
 }
