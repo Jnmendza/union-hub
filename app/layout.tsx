@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang='en'>
+    <html lang='en' suppressHydrationWarning>
       {/* 1. bg-slate-200: Sets a darker background for the 'desktop' area outside the app
        */}
       <body
