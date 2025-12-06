@@ -72,6 +72,66 @@ async function main() {
   }
 
   console.log(`📢 Created ${announcements.length} announcements.`);
+
+  // 3. Create Resources (The Vault)
+  const resources = [
+    {
+      title: "Dale Dale SD",
+      description: "Main Chant Lyrics",
+      url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", // Placeholder
+      type: "PDF",
+      category: "Chants",
+      size: "120 KB"
+    },
+    {
+      title: "Drum Cadence A",
+      description: "Snare & Bass Rhythm",
+      url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", // Placeholder
+      type: "AUDIO",
+      category: "Chants",
+      size: "3:20"
+    },
+    {
+      title: "Union Bylaws 2025",
+      description: "Official Rules & Regulations",
+      url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      type: "PDF",
+      category: "Docs",
+      size: "4.2 MB"
+    },
+    {
+      title: "Tifo Grid: Playoff",
+      description: "Section 102 Layout Plan",
+      url: "https://via.placeholder.com/600x400",
+      type: "IMAGE",
+      category: "Tifo",
+      size: "2.8 MB"
+    },
+    {
+      title: "Vamos San Diego",
+      description: "New Chant (Slow Build)",
+      url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+      type: "AUDIO",
+      category: "Chants",
+      size: "1:45"
+    },
+  ]
+
+  for (const item of resources) {
+    await prisma.resource.create({
+      data: {
+        title: item.title,
+        description: item.description,
+        url: item.url,
+        type: item.type as 'PDF' | 'AUDIO' | 'IMAGE',
+        category: item.category,
+        size: item.size
+      }
+    })
+  }
+  
+  console.log(`📂 Created ${resources.length} vault resources.`)
+  
   console.log("✅ Seeding finished.");
 }
 
