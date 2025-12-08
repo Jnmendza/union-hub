@@ -11,8 +11,31 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
+
+// Validate config
+const requiredKeys = [
+  "apiKey",
+  "authDomain",
+  "projectId",
+  "storageBucket",
+  "messagingSenderId",
+  "appId",
+];
+
+const missingKeys = requiredKeys.filter(
+  (key) => !firebaseConfig[key as keyof typeof firebaseConfig]
+);
+
+if (missingKeys.length > 0) {
+  console.error(
+    `Missing Firebase configuration keys: ${missingKeys.join(", ")}`
+  );
+  console.error(
+    "Please check your .env.local file. See README.md for setup instructions."
+  );
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

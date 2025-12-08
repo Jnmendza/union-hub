@@ -64,8 +64,19 @@ export default function GroupDetailPage() {
 
   // 1. Auth
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
+    // Safety timeout if auth takes too long
+    const timeout = setTimeout(() => {
+      setLoading((prev) => (prev ? false : prev));
+    }, 8000);
+
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      clearTimeout(timeout);
+    });
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   // 2. Fetch Group

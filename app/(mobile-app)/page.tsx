@@ -55,7 +55,19 @@ export default function HomePage() {
 
   // 1. Auth & User Profile
   useEffect(() => {
+    // Safety timeout: stop loading after 8s if auth doesn't resolve
+    const safetyTimer = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          console.warn("Auth listener timed out - force stopping loading");
+          return false;
+        }
+        return prev;
+      });
+    }, 8000);
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      clearTimeout(safetyTimer); // Clear timeout on success
       setUser(currentUser);
       if (currentUser) {
         // Fetch Profile Name
@@ -76,7 +88,11 @@ export default function HomePage() {
         setLoading(false);
       }
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribe();
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   // 2. Data Fetching Logic
