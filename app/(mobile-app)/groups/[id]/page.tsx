@@ -21,9 +21,6 @@ import {
   ChevronLeft,
   Settings,
   MessageSquare,
-  Home,
-  Lock,
-  User,
   Send,
   UserPlus,
 } from "lucide-react";
@@ -44,35 +41,10 @@ interface Message {
   createdAt: Timestamp;
 }
 
-// --- Components ---
-const BottomNav = ({ activeTab }: { activeTab: string }) => {
-  const router = useRouter();
-  const navItems = [
-    { id: "home", icon: Home, label: "Home", path: "/" },
-    { id: "groups", icon: User, label: "Groups", path: "/groups" },
-    { id: "vault", icon: Lock, label: "The Vault", path: "/vault" },
-    { id: "profile", icon: User, label: "My ID", path: "/profile" },
-  ];
-
-  return (
-    <div className='fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 pb-safe pt-2 px-6 flex justify-between items-center z-50 h-20'>
-      {navItems.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => router.push(item.path)}
-          className={`flex flex-col items-center gap-1 transition-colors duration-200 ${
-            activeTab === item.id
-              ? "text-blue-500"
-              : "text-slate-500 hover:text-slate-300"
-          }`}
-        >
-          <item.icon size={24} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-          <span className='text-xs font-medium'>{item.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-};
+interface UserProfile {
+  displayName: string;
+  status?: string;
+}
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -83,25 +55,25 @@ export default function GroupDetailPage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [group, setGroup] = useState<Group | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [senderProfiles, setSenderProfiles] = useState<
+    Record<string, UserProfile>
+  >({});
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
 
-  // 1. Auth Listener
+  // 1. Auth
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
+    const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Group Details
+  // 2. Fetch Group
   useEffect(() => {
     const fetchGroup = async () => {
       if (!groupId) return;
       try {
         const docRef = doc(db, "groups", groupId);
-        // Real-time listener for group details (so we know immediately when we join)
         const unsubscribe = onSnapshot(docRef, (docSnap) => {
           if (docSnap.exists()) {
             setGroup({ id: docSnap.id, ...docSnap.data() } as Group);
@@ -119,36 +91,60 @@ export default function GroupDetailPage() {
     fetchGroup();
   }, [groupId]);
 
-  // 3. Real-time Messages Listener (Only runs if user is a member)
+  // 3. Messages
   const isMember = group?.members?.includes(user?.uid || "");
 
   useEffect(() => {
     if (!groupId || !isMember) return;
-
     const q = query(
       collection(db, "groups", groupId, "messages"),
       orderBy("createdAt", "asc")
     );
-
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Message[];
       setMessages(msgs);
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
+      setTimeout(
+        () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
+        100
+      );
     });
-
     return () => unsubscribe();
   }, [groupId, isMember]);
 
-  // 4. Action Handlers
+  // 4. Profiles
+  useEffect(() => {
+    const fetchMissingProfiles = async () => {
+      const missingIds = messages
+        .map((m) => m.senderId)
+        .filter((id) => !senderProfiles[id] && id !== user?.uid);
+      const uniqueMissingIds = [...new Set(missingIds)];
+      if (uniqueMissingIds.length === 0) return;
+
+      const newProfiles: Record<string, UserProfile> = {};
+      await Promise.all(
+        uniqueMissingIds.map(async (id) => {
+          try {
+            const userDoc = await getDoc(doc(db, "users", id));
+            if (userDoc.exists())
+              newProfiles[id] = userDoc.data() as UserProfile;
+            else newProfiles[id] = { displayName: "Unknown" };
+          } catch (e) {
+            console.error("Failed to fetch profile", id);
+          }
+        })
+      );
+      setSenderProfiles((prev) => ({ ...prev, ...newProfiles }));
+    };
+    if (messages.length > 0) fetchMissingProfiles();
+  }, [messages, senderProfiles, user?.uid]);
+
+  // Handlers
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!newMessage.trim() || !user || !groupId) return;
-
     try {
       await addDoc(collection(db, "groups", groupId, "messages"), {
         text: newMessage,
@@ -165,11 +161,9 @@ export default function GroupDetailPage() {
     if (!user || !groupId) return;
     setJoining(true);
     try {
-      const groupRef = doc(db, "groups", groupId);
-      await updateDoc(groupRef, {
+      await updateDoc(doc(db, "groups", groupId), {
         members: arrayUnion(user.uid),
       });
-      // The onSnapshot in effect #2 will automatically update the UI
     } catch (error) {
       console.error("Error joining group", error);
     } finally {
@@ -177,36 +171,25 @@ export default function GroupDetailPage() {
     }
   };
 
-  if (loading) {
+  if (loading)
     return (
       <div className='flex flex-col items-center justify-center h-screen bg-slate-950 text-slate-500'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4'></div>
-        <p>Loading group...</p>
+        <p>Loading...</p>
       </div>
     );
-  }
-
-  if (!group) {
+  if (!group)
     return (
-      <div className='flex flex-col h-screen bg-slate-950 p-6'>
-        <button
-          onClick={() => router.back()}
-          className='self-start flex items-center gap-2 text-slate-400 mb-8 hover:text-white'
-        >
-          <ChevronLeft size={20} /> Back
-        </button>
-        <div className='flex-1 flex flex-col items-center justify-center text-center'>
-          <h2 className='text-xl font-bold text-white mb-2'>Group not found</h2>
-        </div>
+      <div className='flex flex-col h-screen bg-slate-950 p-6 text-white text-center'>
+        <p>Group not found</p>
       </div>
     );
-  }
 
   // --- ACCESS DENIED VIEW ---
   if (!isMember) {
     return (
-      <div className='fixed inset-0 flex flex-col bg-slate-950 pb-20'>
-        {/* Header */}
+      // Changed to absolute inset-0 to stay inside the MobileLayout's 'main' area
+      <div className='absolute inset-0 flex flex-col bg-slate-950'>
         <div className='bg-slate-950 border-b border-slate-800 p-3 flex items-center gap-3 shrink-0'>
           <button
             onClick={() => router.back()}
@@ -217,9 +200,8 @@ export default function GroupDetailPage() {
           <div className='flex-1 text-center font-bold text-white'>
             Join Group
           </div>
-          <div className='w-10' /> {/* Spacer for balance */}
+          <div className='w-10' />
         </div>
-
         <div className='flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6'>
           <div
             className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-2xl ${
@@ -232,35 +214,30 @@ export default function GroupDetailPage() {
             <h2 className='text-2xl font-bold text-white mb-2'>{group.name}</h2>
             <p className='text-slate-400'>{group.description}</p>
           </div>
-          <div className='bg-slate-900 rounded-xl p-4 w-full border border-slate-800'>
-            <div className='text-slate-500 text-sm mb-1'>Current Members</div>
-            <div className='text-white font-bold text-xl'>
-              {group.members.length}
-            </div>
-          </div>
           <button
             onClick={handleJoinGroup}
             disabled={joining}
-            className='w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50'
+            className='w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all'
           >
             {joining ? (
-              <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white'></div>
+              "Joining..."
             ) : (
               <>
-                <UserPlus size={20} />
-                Join Group
+                {" "}
+                <UserPlus size={20} /> Join Group{" "}
               </>
             )}
           </button>
         </div>
-        <BottomNav activeTab='groups' />
+        {/* Removed BottomNav */}
       </div>
     );
   }
 
-  // --- CHAT VIEW (Only rendered if isMember is true) ---
+  // --- CHAT VIEW (FIXED LAYOUT) ---
   return (
-    <div className='fixed inset-0 flex flex-col bg-slate-950 pb-20'>
+    // Changed to absolute inset-0 to respect the layout boundaries
+    <div className='absolute inset-0 flex flex-col bg-slate-950'>
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;
@@ -271,8 +248,8 @@ export default function GroupDetailPage() {
         }
       `}</style>
 
-      {/* Header */}
-      <div className='bg-slate-950 border-b border-slate-800 p-3 flex items-center gap-3 shrink-0'>
+      {/* 1. Header (Static Top) */}
+      <div className='bg-slate-950 border-b border-slate-800 p-3 flex items-center gap-3 shrink-0 z-10'>
         <button
           onClick={() => router.back()}
           className='p-2 -ml-2 text-slate-400 hover:text-white'
@@ -297,8 +274,8 @@ export default function GroupDetailPage() {
         </button>
       </div>
 
-      {/* Chat Area */}
-      <div className='flex-1 overflow-y-auto p-4 space-y-4 overscroll-none no-scrollbar'>
+      {/* 2. Chat Area (Flex Grow - Takes all middle space) */}
+      <div className='flex-1 overflow-y-auto p-4 space-y-4 overscroll-none no-scrollbar bg-slate-950'>
         <div className='flex flex-col items-center py-8 text-center'>
           <div
             className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white mb-4 ${
@@ -317,24 +294,43 @@ export default function GroupDetailPage() {
 
         {messages.map((msg) => {
           const isMe = user?.uid === msg.senderId;
+          const displayName =
+            senderProfiles[msg.senderId]?.displayName || "User";
+          const initials = displayName.substring(0, 2).toUpperCase();
+
           return (
             <div
               key={msg.id}
               className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}
             >
-              {!isMe && (
-                <div className='w-8 h-8 rounded-full bg-slate-700 flex-shrink-0 flex items-center justify-center text-xs text-white font-bold'>
-                  ?
+              {!isMe ? (
+                <div className='flex flex-col items-center gap-1'>
+                  <div
+                    className='w-8 h-8 rounded-full bg-slate-700 flex-shrink-0 flex items-center justify-center text-xs text-white font-bold'
+                    title={displayName}
+                  >
+                    {initials}
+                  </div>
                 </div>
+              ) : (
+                <div className='w-8' />
               )}
-              <div
-                className={`p-3 rounded-2xl text-sm max-w-[80%] break-words ${
-                  isMe
-                    ? "bg-blue-600 text-white rounded-tr-none"
-                    : "bg-slate-800 text-slate-200 rounded-tl-none"
-                }`}
-              >
-                {msg.text}
+
+              <div className='flex flex-col max-w-[80%]'>
+                {!isMe && (
+                  <span className='text-[10px] text-slate-500 ml-1 mb-0.5'>
+                    {displayName}
+                  </span>
+                )}
+                <div
+                  className={`p-3 rounded-2xl text-sm break-words ${
+                    isMe
+                      ? "bg-blue-600 text-white rounded-tr-none"
+                      : "bg-slate-800 text-slate-200 rounded-tl-none"
+                  }`}
+                >
+                  {msg.text}
+                </div>
               </div>
             </div>
           );
@@ -342,10 +338,10 @@ export default function GroupDetailPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input Area */}
+      {/* 3. Input Area (Static Bottom of content) */}
       <form
         onSubmit={handleSendMessage}
-        className='p-4 bg-slate-900 border-t border-slate-800 shrink-0'
+        className='p-4 bg-slate-900 border-t border-slate-800 shrink-0 z-10'
       >
         <div className='flex gap-2'>
           <input
@@ -369,7 +365,7 @@ export default function GroupDetailPage() {
         </div>
       </form>
 
-      <BottomNav activeTab='groups' />
+      {/* Removed BottomNav */}
     </div>
   );
 }

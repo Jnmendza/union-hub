@@ -23,36 +23,6 @@ import {
   Copy,
 } from "lucide-react";
 
-// --- Components ---
-const BottomNav = ({ activeTab }: { activeTab: string }) => {
-  const router = useRouter();
-  const navItems = [
-    { id: "home", icon: Home, label: "Home", path: "/" },
-    { id: "groups", icon: Users, label: "Groups", path: "/groups" },
-    { id: "vault", icon: Lock, label: "The Vault", path: "/vault" },
-    { id: "profile", icon: User, label: "My ID", path: "/profile" },
-  ];
-
-  return (
-    <div className='fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 pb-safe pt-2 px-6 flex justify-between items-center z-50 h-20'>
-      {navItems.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => router.push(item.path)}
-          className={`flex flex-col items-center gap-1 transition-colors duration-200 ${
-            activeTab === item.id
-              ? "text-blue-500"
-              : "text-slate-500 hover:text-slate-300"
-          }`}
-        >
-          <item.icon size={24} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-          <span className='text-xs font-medium'>{item.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-};
-
 export default function ProfilePage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
@@ -448,8 +418,6 @@ export default function ProfilePage() {
           Version 1.0.4 • Chavos SG
         </p>
       </div>
-
-      <BottomNav activeTab='profile' />
     </div>
   );
 }
