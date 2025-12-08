@@ -13,7 +13,7 @@ interface MatchWidgetProps {
 
 export function MatchWidget({
   opponentName,
-  opponentLogoUrl,
+  // opponentLogoUrl,
   matchDate,
   matchTime,
   venue,

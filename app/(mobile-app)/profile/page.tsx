@@ -4,12 +4,8 @@ import React, { useState, useEffect } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
+
 import {
-  Home,
-  Users,
-  Lock,
-  User,
   Camera,
   LogOut,
   QrCode,

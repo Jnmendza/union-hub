@@ -15,10 +15,7 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import {
-  Home,
   Users,
-  Lock,
-  User,
   Bell,
   MessageSquare,
   ChevronRight,
@@ -162,7 +159,9 @@ export default function HomePage() {
             <h1 className='text-2xl font-bold text-white'>
               {user ? `Hello, ${displayName}` : "Welcome"}
             </h1>
-            <p className='text-slate-400 text-sm'>Here's what's happening</p>
+            <p className='text-slate-400 text-sm'>
+              Here&apos;s what&apos;s happening
+            </p>
           </div>
           <div className='w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center border border-slate-800 relative'>
             <Bell size={20} className='text-slate-400' />

@@ -131,7 +131,7 @@ export default function GroupDetailPage() {
             if (userDoc.exists())
               newProfiles[id] = userDoc.data() as UserProfile;
             else newProfiles[id] = { displayName: "Unknown" };
-          } catch (e) {
+          } catch {
             console.error("Failed to fetch profile", id);
           }
         })

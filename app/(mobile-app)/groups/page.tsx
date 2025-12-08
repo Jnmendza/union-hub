@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  getAuth,
   signInAnonymously,
   onAuthStateChanged,
   User as FirebaseUser,
@@ -10,15 +9,7 @@ import {
 import { collection, addDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase"; // Import from your config file
 import { useRouter } from "next/navigation"; // Use Next.js router
-import {
-  Home,
-  Users,
-  Lock,
-  User,
-  Plus,
-  Search,
-  ChevronLeft,
-} from "lucide-react";
+import { Users, Plus, Search, ChevronLeft } from "lucide-react";
 
 // --- Types ---
 interface Group {
