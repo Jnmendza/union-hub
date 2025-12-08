@@ -19,6 +19,15 @@ type Message = {
   }
 }
 
+// Database shape of the message (snake_case from Supabase)
+interface MessageDB {
+  id: string
+  content: string
+  senderId: string
+  created_at: string
+  groupId: string
+}
+
 interface ChatWindowProps {
   initialMessages: Message[]
   currentUserId: string
@@ -58,7 +67,7 @@ export function ChatWindow({ initialMessages, currentUserId, groupId }: ChatWind
           filter: `groupId=eq.${groupId}`, // Only listen to THIS group
         },
         async (payload) => {
-          const newMsg = payload.new as any
+          const newMsg = payload.new as MessageDB
           
           // Optimization: If *I* sent this, I already optimistically added it.
           // We can check IDs to prevent duplicates, but for MVP simpler is better:

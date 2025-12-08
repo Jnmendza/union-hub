@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint",
     "db:push:prod": "dotenv -e .env.production -- npx prisma db push"
   },
   "dependencies": {

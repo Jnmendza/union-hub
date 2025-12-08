@@ -1,10 +1,10 @@
-import { MatchWidget } from "./(components)/match-widget";
+import { prisma } from "@/lib/prisma"; // Import Prisma
+import { createClient } from "@/utils/supabase/server"; // For the greeting
+import { MatchWidget } from "@/app/(components)/match-widget";
 import {
   AnnouncementCard,
   AnnouncementCategory,
-} from "./(components)/announcement-card";
-import { prisma } from "@/lib/prisma"; // Import Prisma
-import { createClient } from "@/utils/supabase/server"; // For the greeting
+} from "@/app/(components)/announcement-card";
 
 // 1. Convert to Async Component
 export default async function Home() {
