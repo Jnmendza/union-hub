@@ -86,7 +86,7 @@ export default function VaultPage() {
   const [newDesc, setNewDesc] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [newCategory, setNewCategory] = useState("General");
-  const [newType, setNewType] = useState<"LINK" | "TEXT" | "FILE">("LINK");
+  const [newType, setNewType] = useState<Resource["type"]>("LINK");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -128,7 +128,7 @@ export default function VaultPage() {
 
       // A. Upload File to Firebase Storage
       if (newType === "FILE" && selectedFile) {
-        const fileExt = selectedFile.name.split(".").pop();
+        // const fileExt = selectedFile.name.split(".").pop();
         const storageRef = ref(
           storage,
           `vault/${user.uid}/${Date.now()}_${selectedFile.name}`
@@ -342,7 +342,7 @@ export default function VaultPage() {
                   <select
                     value={newType}
                     onChange={(e) => {
-                      setNewType(e.target.value as any);
+                      setNewType(e.target.value as Resource["type"]);
                       setNewUrl("");
                       setSelectedFile(null);
                     }}

@@ -10,7 +10,6 @@ import {
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import {
-  Save,
   Camera,
   LogOut,
   QrCode,

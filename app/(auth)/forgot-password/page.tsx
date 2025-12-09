@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
 import { Mail, ArrowLeft, KeyRound } from "lucide-react";
 import Link from "next/link";
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
@@ -26,13 +24,18 @@ export default function ForgotPasswordPage() {
       await sendPasswordResetEmail(auth, email);
       setStatus("success");
       setMessage("Check your email inbox for password reset instructions.");
-    } catch (err: any) {
+    } catch (err) {
       setStatus("error");
-      // Clean up Firebase error messages for display
-      const errorMsg = err.message
-        .replace("Firebase: ", "")
-        .replace("Error (auth/", "")
-        .replace(").", "");
+
+      let errorMsg = "";
+      if (err instanceof Error) {
+        // Clean up Firebase error messages for display
+        errorMsg = err.message
+          .replace("Firebase: ", "")
+          .replace("Error (auth/", "")
+          .replace(").", "");
+      }
+
       setMessage(
         errorMsg || "Failed to send reset email. Please check the address."
       );
@@ -60,8 +63,8 @@ export default function ForgotPasswordPage() {
           </div>
           <h1 className='text-2xl font-bold text-white mb-2'>Reset Password</h1>
           <p className='text-slate-400 text-sm leading-relaxed'>
-            Enter the email associated with your account and we'll send you a
-            link to reset your password.
+            Enter the email associated with your account and we&apos;ll send you
+            a link to reset your password.
           </p>
         </div>
 

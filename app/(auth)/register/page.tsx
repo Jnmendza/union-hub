@@ -5,7 +5,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { User, Mail, Lock, Eye, EyeOff, Check, X } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, Check } from "lucide-react";
 import Link from "next/link";
 
 export default function RegisterPage() {
@@ -68,14 +68,18 @@ export default function RegisterPage() {
       });
 
       router.push("/");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(
-        err.message
-          .replace("Firebase: ", "")
-          .replace("Error (auth/", "")
-          .replace(").", "")
-      );
+      if (err instanceof Error) {
+        setError(
+          err.message
+            .replace("Firebase: ", "")
+            .replace("Error (auth/", "")
+            .replace(").", "")
+        );
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
     }

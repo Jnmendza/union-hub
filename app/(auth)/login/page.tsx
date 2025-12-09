@@ -22,8 +22,12 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/");
-    } catch (err: any) {
-      setError(err.message.replace("Firebase: ", ""));
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message.replace("Firebase: ", ""));
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -86,7 +90,7 @@ export default function LoginPage() {
         </form>
 
         <p className='text-center text-slate-500 text-sm mt-8'>
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link
             href='/register'
             className='text-blue-500 font-bold hover:underline'
