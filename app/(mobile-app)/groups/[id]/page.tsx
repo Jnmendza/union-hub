@@ -1,145 +1,382 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  doc,
+  getDoc,
+  collection,
+  addDoc,
+  updateDoc,
+  arrayUnion,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
+  Timestamp,
+} from "firebase/firestore";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Send, Paperclip, MoreVertical } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import {
+  ChevronLeft,
+  Settings,
+  MessageSquare,
+  Send,
+  UserPlus,
+} from "lucide-react";
 
-// Mock Messages Data
-const MOCK_MESSAGES = [
-  {
-    id: 1,
-    sender: "Mike",
-    text: "Everyone meeting at Lot B?",
-    time: "10:00 AM",
-    isMe: false,
-  },
-  {
-    id: 2,
-    sender: "Sarah",
-    text: "Yeah, we have the tents set up already.",
-    time: "10:02 AM",
-    isMe: false,
-  },
-  {
-    id: 3,
-    sender: "Me",
-    text: "On my way! Bringing extra ice.",
-    time: "10:05 AM",
-    isMe: true,
-  },
-  {
-    id: 4,
-    sender: "Mike",
-    text: "Perfect. We need it.",
-    time: "10:06 AM",
-    isMe: false,
-  },
-  { id: 5, sender: "Me", text: "See you in 10.", time: "10:07 AM", isMe: true },
-];
+// --- Types ---
+interface Group {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  members: string[];
+}
 
-export default function ChatRoomPage() {
+interface Message {
+  id: string;
+  text: string;
+  senderId: string;
+  createdAt: Timestamp;
+}
+
+interface UserProfile {
+  displayName: string;
+  status?: string;
+}
+
+export default function GroupDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const groupId = params.id as string; // e.g., "chavos"
+  const groupId = typeof params?.id === "string" ? params.id : "";
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const [message, setMessage] = useState("");
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [group, setGroup] = useState<Group | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [senderProfiles, setSenderProfiles] = useState<
+    Record<string, UserProfile>
+  >({});
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState(false);
 
-  return (
-    <div className='relative z-50 flex h-screen flex-col bg-slate-50 dark:bg-slate-950'>
-      {/* 1. Chat Header (Fixed Top) */}
-      <header className='sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90'>
-        <div className='flex items-center gap-3'>
-          <Button
-            variant='ghost'
-            size='icon'
+  // 1. Auth
+  useEffect(() => {
+    // Safety timeout if auth takes too long
+    const timeout = setTimeout(() => {
+      setLoading((prev) => (prev ? false : prev));
+    }, 8000);
+
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      clearTimeout(timeout);
+    });
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  // 2. Fetch Group
+  useEffect(() => {
+    const fetchGroup = async () => {
+      if (!groupId) return;
+      try {
+        const docRef = doc(db, "groups", groupId);
+        const unsubscribe = onSnapshot(docRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setGroup({ id: docSnap.id, ...docSnap.data() } as Group);
+          } else {
+            setGroup(null);
+          }
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      } catch (error) {
+        console.error("Error fetching group:", error);
+        setLoading(false);
+      }
+    };
+    fetchGroup();
+  }, [groupId]);
+
+  // 3. Messages
+  const isMember = group?.members?.includes(user?.uid || "");
+
+  useEffect(() => {
+    if (!groupId || !isMember) return;
+    const q = query(
+      collection(db, "groups", groupId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Message[];
+      setMessages(msgs);
+      setTimeout(
+        () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
+        100
+      );
+    });
+    return () => unsubscribe();
+  }, [groupId, isMember]);
+
+  // 4. Profiles
+  useEffect(() => {
+    const fetchMissingProfiles = async () => {
+      const missingIds = messages
+        .map((m) => m.senderId)
+        .filter((id) => !senderProfiles[id] && id !== user?.uid);
+      const uniqueMissingIds = [...new Set(missingIds)];
+      if (uniqueMissingIds.length === 0) return;
+
+      const newProfiles: Record<string, UserProfile> = {};
+      await Promise.all(
+        uniqueMissingIds.map(async (id) => {
+          try {
+            const userDoc = await getDoc(doc(db, "users", id));
+            if (userDoc.exists())
+              newProfiles[id] = userDoc.data() as UserProfile;
+            else newProfiles[id] = { displayName: "Unknown" };
+          } catch {
+            console.error("Failed to fetch profile", id);
+          }
+        })
+      );
+      setSenderProfiles((prev) => ({ ...prev, ...newProfiles }));
+    };
+    if (messages.length > 0) fetchMissingProfiles();
+  }, [messages, senderProfiles, user?.uid]);
+
+  // Handlers
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!newMessage.trim() || !user || !groupId) return;
+    try {
+      await addDoc(collection(db, "groups", groupId, "messages"), {
+        text: newMessage,
+        senderId: user.uid,
+        createdAt: serverTimestamp(),
+      });
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  const handleJoinGroup = async () => {
+    if (!user || !groupId) return;
+    setJoining(true);
+    try {
+      await updateDoc(doc(db, "groups", groupId), {
+        members: arrayUnion(user.uid),
+      });
+    } catch (error) {
+      console.error("Error joining group", error);
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  if (loading)
+    return (
+      <div className='flex flex-col items-center justify-center h-screen bg-slate-950 text-slate-500'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4'></div>
+        <p>Loading...</p>
+      </div>
+    );
+  if (!group)
+    return (
+      <div className='flex flex-col h-screen bg-slate-950 p-6 text-white text-center'>
+        <p>Group not found</p>
+      </div>
+    );
+
+  // --- ACCESS DENIED VIEW ---
+  if (!isMember) {
+    return (
+      // Changed to absolute inset-0 to stay inside the MobileLayout's 'main' area
+      <div className='absolute inset-0 flex flex-col bg-slate-950'>
+        <div className='bg-slate-950 border-b border-slate-800 p-3 flex items-center gap-3 shrink-0'>
+          <button
             onClick={() => router.back()}
-            className='-ml-2'
+            className='p-2 -ml-2 text-slate-400 hover:text-white'
           >
-            <ArrowLeft className='h-5 w-5 text-slate-600' />
-          </Button>
-          <div className='flex flex-col'>
-            <h1 className='text-sm font-bold text-slate-900 capitalize dark:text-white'>
-              {groupId.replace("-", " ")}
-            </h1>
-            <span className='text-[10px] text-slate-500'>
-              24 members online
-            </span>
+            <ChevronLeft size={24} />
+          </button>
+          <div className='flex-1 text-center font-bold text-white'>
+            Join Group
           </div>
+          <div className='w-10' />
         </div>
-        <Button variant='ghost' size='icon'>
-          <MoreVertical className='h-5 w-5 text-slate-500' />
-        </Button>
-      </header>
+        <div className='flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6'>
+          <div
+            className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-2xl ${
+              group.color || "bg-blue-600"
+            }`}
+          >
+            {group.name.substring(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <h2 className='text-2xl font-bold text-white mb-2'>{group.name}</h2>
+            <p className='text-slate-400'>{group.description}</p>
+          </div>
+          <button
+            onClick={handleJoinGroup}
+            disabled={joining}
+            className='w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all'
+          >
+            {joining ? (
+              "Joining..."
+            ) : (
+              <>
+                {" "}
+                <UserPlus size={20} /> Join Group{" "}
+              </>
+            )}
+          </button>
+        </div>
+        {/* Removed BottomNav */}
+      </div>
+    );
+  }
 
-      {/* 2. Message List (Scrollable Middle) */}
-      <div className='flex-1 overflow-y-auto p-4 pb-20'>
-        {/* pb-20 is crucial to prevent the last message from being hidden behind the input bar */}
+  // --- CHAT VIEW (FIXED LAYOUT) ---
+  return (
+    // Changed to absolute inset-0 to respect the layout boundaries
+    <div className='absolute inset-0 flex flex-col bg-slate-950'>
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
 
-        <div className='flex flex-col gap-4'>
-          {MOCK_MESSAGES.map((msg) => (
+      {/* 1. Header (Static Top) */}
+      <div className='bg-slate-950 border-b border-slate-800 p-3 flex items-center gap-3 shrink-0 z-10'>
+        <button
+          onClick={() => router.back()}
+          className='p-2 -ml-2 text-slate-400 hover:text-white'
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <div
+          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0 ${
+            group.color || "bg-blue-600"
+          }`}
+        >
+          {group.name.substring(0, 2).toUpperCase()}
+        </div>
+        <div className='flex-1 min-w-0'>
+          <h2 className='text-white font-bold truncate'>{group.name}</h2>
+          <p className='text-xs text-slate-400 truncate'>
+            {group.members?.length || 1} members
+          </p>
+        </div>
+        <button className='p-2 text-slate-400 hover:text-white'>
+          <Settings size={20} />
+        </button>
+      </div>
+
+      {/* 2. Chat Area (Flex Grow - Takes all middle space) */}
+      <div className='flex-1 overflow-y-auto p-4 space-y-4 overscroll-none no-scrollbar bg-slate-950'>
+        <div className='flex flex-col items-center py-8 text-center'>
+          <div
+            className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white mb-4 ${
+              group.color || "bg-blue-600"
+            }`}
+          >
+            {group.name.substring(0, 2).toUpperCase()}
+          </div>
+          <h3 className='text-white font-bold text-lg'>
+            Welcome to {group.name}
+          </h3>
+          <p className='text-slate-400 text-sm mt-1 max-w-xs'>
+            {group.description}
+          </p>
+        </div>
+
+        {messages.map((msg) => {
+          const isMe = user?.uid === msg.senderId;
+          const displayName =
+            senderProfiles[msg.senderId]?.displayName || "User";
+          const initials = displayName.substring(0, 2).toUpperCase();
+
+          return (
             <div
               key={msg.id}
-              className={cn(
-                "flex w-max max-w-[75%] flex-col rounded-2xl px-4 py-2 text-sm shadow-sm",
-                msg.isMe
-                  ? "self-end bg-blue-600 text-white rounded-br-none" // My Message (Right)
-                  : "self-start bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 rounded-bl-none" // Their Message (Left)
-              )}
+              className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}
             >
-              {!msg.isMe && (
-                <span className='mb-1 text-[10px] font-bold text-slate-400 dark:text-slate-500'>
-                  {msg.sender}
-                </span>
+              {!isMe ? (
+                <div className='flex flex-col items-center gap-1'>
+                  <div
+                    className='w-8 h-8 rounded-full bg-slate-700 flex-shrink-0 flex items-center justify-center text-xs text-white font-bold'
+                    title={displayName}
+                  >
+                    {initials}
+                  </div>
+                </div>
+              ) : (
+                <div className='w-8' />
               )}
-              <span>{msg.text}</span>
-              <span
-                className={cn(
-                  "mt-1 self-end text-[10px]",
-                  msg.isMe ? "text-blue-200" : "text-slate-400"
+
+              <div className='flex flex-col max-w-[80%]'>
+                {!isMe && (
+                  <span className='text-[10px] text-slate-500 ml-1 mb-0.5'>
+                    {displayName}
+                  </span>
                 )}
-              >
-                {msg.time}
-              </span>
+                <div
+                  className={`p-3 rounded-2xl text-sm break-words ${
+                    isMe
+                      ? "bg-blue-600 text-white rounded-tr-none"
+                      : "bg-slate-800 text-slate-200 rounded-tl-none"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
+        <div ref={bottomRef} />
       </div>
 
-      {/* 3. Input Area (Fixed Bottom) */}
-      <div className='fixed bottom-0 z-20 w-full max-w-md border-t border-slate-200 bg-white px-4 py-3 pb-safe dark:border-slate-800 dark:bg-slate-950'>
-        <div className='flex items-center gap-2'>
-          <Button
-            variant='ghost'
-            size='icon'
-            className='shrink-0 text-slate-400'
-          >
-            <Paperclip className='h-5 w-5' />
-          </Button>
-
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
+      {/* 3. Input Area (Static Bottom of content) */}
+      <form
+        onSubmit={handleSendMessage}
+        className='p-4 bg-slate-900 border-t border-slate-800 shrink-0 z-10'
+      >
+        <div className='flex gap-2'>
+          <input
+            type='text'
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
             placeholder='Message...'
-            className='rounded-full border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900'
+            className='flex-1 bg-slate-800 text-white px-4 py-3 rounded-full border border-slate-700 focus:border-blue-500 focus:outline-none'
           />
-
-          <Button
-            size='icon'
-            className={cn(
-              "shrink-0 rounded-full transition-all",
-              message
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-slate-200 text-slate-400"
-            )}
-            disabled={!message}
+          <button
+            type='submit'
+            disabled={!newMessage.trim()}
+            className='p-3 text-white bg-blue-600 rounded-full hover:bg-blue-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed'
           >
-            <Send className='h-4 w-4' />
-          </Button>
+            {newMessage.trim() ? (
+              <Send size={20} />
+            ) : (
+              <MessageSquare size={20} />
+            )}
+          </button>
         </div>
-      </div>
+      </form>
+
+      {/* Removed BottomNav */}
     </div>
   );
 }

@@ -1,13 +1,6 @@
 import { CalendarClock, MapPin, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
 interface MatchWidgetProps {
   opponentName: string;
@@ -20,7 +13,7 @@ interface MatchWidgetProps {
 
 export function MatchWidget({
   opponentName,
-  opponentLogoUrl,
+  // opponentLogoUrl,
   matchDate,
   matchTime,
   venue,
