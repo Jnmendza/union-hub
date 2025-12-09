@@ -54,7 +54,7 @@ const CategoryBadge = ({ category }: { category: string }) => {
   );
 };
 
-const ResourceIcon = ({ type }: { type: string }) => {
+const ResourceIcon = ({ type }: { type: Resource["type"] }) => {
   switch (type) {
     case "LINK":
       return <LinkIcon size={18} className='text-blue-400' />;
@@ -358,7 +358,7 @@ export default function VaultPage() {
                   <select
                     value={newType}
                     onChange={(e) => {
-                      setNewType(e.target.value as any);
+                      setNewType(e.target.value as Resource["type"]);
                       setNewUrl("");
                       setSelectedFile(null);
                     }}
