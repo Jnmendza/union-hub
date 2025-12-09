@@ -124,8 +124,8 @@ export default function GroupsPage() {
 
   // Fetch Groups
   useEffect(() => {
-    // Note: We don't need 'if (!user)' check for public groups strictly,
-    // but good for private ones.
+    // Add guard - if no user , do nothing.
+    if (!user) return;
 
     // IMPORTANT: Simplified path to match your [id] page
     const q = collection(db, "groups");

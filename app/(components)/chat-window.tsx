@@ -1,192 +1,245 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
-import { sendMessage } from '@/app/(mobile-app)/groups/[id]/actions'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Send, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useState, useEffect, useRef } from "react";
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  doc,
+  getDoc,
+  Timestamp,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Send, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// Define the shape of a message
-type Message = {
-  id: string
-  content: string
-  senderId: string
-  createdAt: Date
-  sender: {
-    name: string | null
-  }
+// Types
+interface Message {
+  id: string;
+  text: string;
+  senderId: string;
+  createdAt: Timestamp | null;
 }
 
-// Database shape of the message (snake_case from Supabase)
-interface MessageDB {
-  id: string
-  content: string
-  senderId: string
-  created_at: string
-  groupId: string
+interface UserProfile {
+  displayName: string;
 }
 
 interface ChatWindowProps {
-  initialMessages: Message[]
-  currentUserId: string
-  groupId: string
+  groupId: string;
+  currentUserId: string;
 }
 
-export function ChatWindow({ initialMessages, currentUserId, groupId }: ChatWindowProps) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages)
-  const [inputText, setInputText] = useState('')
-  const [isSending, setIsSending] = useState(false)
-  
-  // Ref for auto-scrolling
-  const scrollRef = useRef<HTMLDivElement>(null)
+export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [senderProfiles, setSenderProfiles] = useState<
+    Record<string, UserProfile>
+  >({});
+  const [inputText, setInputText] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
-  // 1. Scroll to bottom on load and on new message
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 1. Realtime Subscription (Messages)
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [messages])
+    if (!groupId) return;
 
-  // 2. Realtime Subscription
+    const q = query(
+      collection(db, "groups", groupId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+
+    // Added Error Handling to the Snapshot Listener
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const msgs = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Message[];
+
+        setMessages(msgs);
+
+        // Auto-scroll on new message
+        setTimeout(() => {
+          scrollRef.current?.scrollTo({
+            top: scrollRef.current.scrollHeight,
+            behavior: "smooth",
+          });
+        }, 100);
+      },
+      (error) => {
+        console.error("Chat Snapshot Error:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [groupId]);
+
+  // 2. Fetch Sender Profiles
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const fetchMissingProfiles = async () => {
+      const uniqueSenderIds = [...new Set(messages.map((m) => m.senderId))];
+      const idsToFetch = uniqueSenderIds.filter(
+        (id) => !senderProfiles[id] && id !== currentUserId
+      );
 
-    const channel = supabase
-      .channel('realtime-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'Message',
-          filter: `groupId=eq.${groupId}`, // Only listen to THIS group
-        },
-        async (payload) => {
-          const newMsg = payload.new as MessageDB
-          
-          // Optimization: If *I* sent this, I already optimistically added it.
-          // We can check IDs to prevent duplicates, but for MVP simpler is better:
-          // We will fetch the sender name separately or just default to "Someone"
-          // because Realtime payload doesn't include relations (sender name).
-          
-          // Logic: Only add if we don't already have this ID (prevents duplicates from optimistic UI)
-          setMessages((prev) => {
-            if (prev.find(m => m.id === newMsg.id)) return prev
-            
-            // Construct a message object from the payload
-            return [...prev, {
-              id: newMsg.id,
-              content: newMsg.content,
-              senderId: newMsg.senderId,
-              createdAt: new Date(newMsg.created_at), // Note: Supabase uses snake_case in payload
-              sender: { name: 'Member' } // We don't get joined data in realtime, fallback name
-            }]
-          })
-        }
-      )
-      .subscribe()
+      if (idsToFetch.length === 0) return;
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [groupId])
+      const newProfiles: Record<string, UserProfile> = {};
 
-  // 3. Handle Send
+      await Promise.all(
+        idsToFetch.map(async (id) => {
+          try {
+            const userSnap = await getDoc(doc(db, "users", id));
+            if (userSnap.exists()) {
+              newProfiles[id] = userSnap.data() as UserProfile;
+            } else {
+              newProfiles[id] = { displayName: "Unknown" };
+            }
+          } catch (e) {
+            console.error("Failed to fetch profile", id, e);
+          }
+        })
+      );
+
+      setSenderProfiles((prev) => ({ ...prev, ...newProfiles }));
+    };
+
+    if (messages.length > 0) fetchMissingProfiles();
+  }, [messages, currentUserId, senderProfiles]);
+
+  // 3. Handle Send (Optimistic Updates Added)
   const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inputText.trim()) return
+    e.preventDefault();
+    if (!inputText.trim() || !groupId || !currentUserId) return;
 
-    const tempId = Math.random().toString() // Temporary ID
-    const text = inputText
-    setInputText('') // Clear input immediately (UX)
-    
-    // Optimistic Update: Show it immediately before server confirms
+    const textToSend = inputText;
+    setInputText(""); // Clear UI immediately
+    setIsSending(true);
+
+    // Optimistic Update: Show message immediately
     const optimisticMsg: Message = {
-      id: tempId,
-      content: text,
+      id: "optimistic-" + Date.now(),
+      text: textToSend,
       senderId: currentUserId,
-      createdAt: new Date(),
-      sender: { name: 'Me' }
-    }
-    
-    setMessages(prev => [...prev, optimisticMsg])
+      createdAt: null, // Pending timestamp
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
 
-    // Send to Server
-    setIsSending(true)
-    const savedMsg = await sendMessage(groupId, text)
-    setIsSending(false)
+    // Scroll immediately
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 10);
 
-    // Replace optimistic message with real one (to get real ID)
-    if (savedMsg) {
-      setMessages(prev => prev.map(m => m.id === tempId ? savedMsg : m))
+    try {
+      await addDoc(collection(db, "groups", groupId, "messages"), {
+        text: textToSend,
+        senderId: currentUserId,
+        createdAt: serverTimestamp(),
+      });
+      // Success: onSnapshot will take over and replace the optimistic message
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // remove the optimistic message on failure or show error state
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      alert("Failed to send message. Check console for permission errors.");
+      setInputText(textToSend); // Restore text
+    } finally {
+      setIsSending(false);
     }
-  }
+  };
 
   return (
-    <div className="flex h-full flex-col">
-      
+    <div className='flex h-full flex-col bg-slate-950'>
       {/* Messages Area */}
-      <div 
+      <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 pb-4 space-y-4"
+        className='flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar'
       >
+        {messages.length === 0 && (
+          <div className='flex h-full items-center justify-center text-slate-500 text-sm'>
+            No messages yet. Say hello!
+          </div>
+        )}
+
         {messages.map((msg) => {
-          const isMe = msg.senderId === currentUserId
-          
+          const isMe = msg.senderId === currentUserId;
+          const profile = senderProfiles[msg.senderId];
+          const displayName = profile?.displayName || "User";
+
           return (
-            <div 
-              key={msg.id} 
+            <div
+              key={msg.id}
               className={cn(
-                "flex w-max max-w-[75%] flex-col rounded-2xl px-4 py-2 text-sm shadow-sm",
-                isMe 
-                  ? "self-end bg-blue-600 text-white rounded-br-none" 
-                  : "self-start bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 rounded-bl-none"
+                "flex w-max max-w-[75%] flex-col rounded-2xl px-4 py-2 text-sm shadow-sm animate-in fade-in slide-in-from-bottom-2",
+                isMe
+                  ? "self-end bg-blue-600 text-white rounded-br-none"
+                  : "self-start bg-slate-800 text-slate-200 rounded-bl-none",
+                // Opacity for pending messages
+                msg.createdAt === null && "opacity-70"
               )}
             >
               {!isMe && (
-                <span className="mb-1 text-[10px] font-bold text-slate-400 dark:text-slate-500">
-                  {msg.sender.name || "Member"}
+                <span className='mb-1 text-[10px] font-bold text-slate-400'>
+                  {displayName}
                 </span>
               )}
-              <span>{msg.content}</span>
-              <span className={cn(
-                "mt-1 self-end text-[10px]",
-                isMe ? "text-blue-200" : "text-slate-400"
-              )}>
-                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })}
+              <span>{msg.text}</span>
+              <span
+                className={cn(
+                  "mt-1 self-end text-[10px]",
+                  isMe ? "text-blue-200" : "text-slate-500"
+                )}
+              >
+                {msg.createdAt?.toDate
+                  ? msg.createdAt.toDate().toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Sending..."}
               </span>
             </div>
-          )
+          );
         })}
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-slate-200 bg-white px-4 py-3 pb-safe dark:border-slate-800 dark:bg-slate-950">
-        <form onSubmit={handleSend} className="flex items-center gap-2">
-          <Input 
+      <div className='border-t border-slate-800 bg-slate-950 px-4 py-3'>
+        <form onSubmit={handleSend} className='flex items-center gap-2'>
+          <Input
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Message..." 
-            className="rounded-full border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900"
+            placeholder='Message...'
+            className='rounded-full border-slate-700 bg-slate-900 text-white focus:border-blue-500'
           />
-          <Button 
-            type="submit"
-            size="icon" 
+          <Button
+            type='submit'
+            size='icon'
             className={cn(
               "shrink-0 rounded-full transition-all",
-              inputText ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-200 text-slate-400"
+              inputText
+                ? "bg-blue-600 hover:bg-blue-500 text-white"
+                : "bg-slate-800 text-slate-500"
             )}
             disabled={!inputText || isSending}
           >
-            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {isSending ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : (
+              <Send className='h-4 w-4' />
+            )}
           </Button>
         </form>
       </div>
     </div>
-  )
+  );
 }

@@ -1,35 +1,73 @@
+"use client";
 
-import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
-import { AdminSidebar } from '../(components)/admin-sidebar'
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { AdminSidebar } from "../(components)/admin-sidebar"; // Ensure path is correct
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  // 1. Security Check: Ensure user is actually an Admin/Board member
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
 
-  if (!user) redirect('/login')
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        router.push("/login");
+        return;
+      }
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id }
-  })
+      try {
+        // 1. Fetch user profile from Firestore
+        const profileSnap = await getDoc(doc(db, "users", user.uid));
 
-  if (!dbUser || (dbUser.role !== 'ADMIN' && dbUser.role !== 'BOARD')) {
-    // If they aren't admin, kick them back to the mobile app
-    redirect('/')
+        if (profileSnap.exists()) {
+          const userData = profileSnap.data();
+
+          // 2. Check Role (Matches your old logic: ADMIN or BOARD)
+          if (userData.role === "ADMIN" || userData.role === "BOARD") {
+            setAuthorized(true);
+          } else {
+            // Not authorized? Kick them back to the main app
+            router.push("/");
+          }
+        } else {
+          // No profile? Kick them out.
+          router.push("/");
+        }
+      } catch (error) {
+        console.error("Error checking admin role:", error);
+        router.push("/");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className='min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500'></div>
+      </div>
+    );
   }
 
+  // If we get here and authorized is false, the router is already redirecting.
+  // We return null to prevent flashing restricted content.
+  if (!authorized) return null;
+
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className='flex min-h-screen bg-slate-50 dark:bg-slate-900'>
       <AdminSidebar />
-      <main className="flex-1 overflow-y-auto p-8">
-        {children}
-      </main>
+      <main className='flex-1 overflow-y-auto p-8'>{children}</main>
     </div>
-  )
+  );
 }

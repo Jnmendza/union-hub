@@ -9,8 +9,10 @@ import {
   LogOut,
   LucideIcon,
 } from "lucide-react";
+import { auth } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
-import { logout } from "../(auth)/login/actions";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 // Interface for the reusable row
 interface SettingsRowProps {
@@ -67,9 +69,19 @@ function SettingsRow({
 
 export function ProfileSettings() {
   const { setTheme, theme } = useTheme();
+  const router = useRouter();
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push("/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   return (
@@ -110,7 +122,7 @@ export function ProfileSettings() {
             icon={LogOut}
             label='Log Out'
             destructive
-            onClick={() => logout()}
+            onClick={handleLogout}
           />
         </div>
       </div>

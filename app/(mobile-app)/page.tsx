@@ -10,6 +10,7 @@ import {
   getDoc,
   limit,
   orderBy,
+  Timestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -20,6 +21,11 @@ import {
   MessageSquare,
   ChevronRight,
   Activity,
+  Megaphone,
+  AlertCircle,
+  Calendar,
+  Info,
+  Check,
 } from "lucide-react";
 
 // --- Types ---
@@ -31,46 +37,84 @@ interface ActivityItem {
   groupColor: string;
   content: string;
   timestamp: Date;
-  senderName?: string;
 }
 
-// Simple date formatter if you don't want to install date-fns
+interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  category: "URGENT" | "EVENT" | "GENERAL";
+  createdAt: Timestamp;
+}
+
+// --- Components ---
+
 const formatTimeAgo = (date: Date) => {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
   if (diffInSeconds < 60) return "Just now";
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
   return `${Math.floor(diffInSeconds / 86400)}d ago`;
 };
 
+const AnnouncementCard = ({ item }: { item: Announcement }) => {
+  const styles = {
+    URGENT: "bg-red-500/10 border-red-500/20 text-red-200",
+    EVENT: "bg-purple-500/10 border-purple-500/20 text-purple-200",
+    GENERAL: "bg-blue-500/10 border-blue-500/20 text-blue-200",
+  };
+
+  const icon = {
+    URGENT: <AlertCircle size={18} className='text-red-400' />,
+    EVENT: <Calendar size={18} className='text-purple-400' />,
+    GENERAL: <Info size={18} className='text-blue-400' />,
+  };
+
+  return (
+    <div
+      className={`p-4 rounded-2xl border mb-3 ${
+        styles[item.category] || styles["GENERAL"]
+      }`}
+    >
+      <div className='flex items-start gap-3'>
+        <div className='mt-0.5'>{icon[item.category] || icon["GENERAL"]}</div>
+        <div className='flex-1 min-w-0'>
+          <h4 className='font-bold text-sm mb-1 text-white'>{item.title}</h4>
+          <p className='text-xs opacity-90 leading-relaxed whitespace-pre-wrap'>
+            {item.content}
+          </p>
+          <p className='text-[10px] mt-2 opacity-60'>
+            {item.createdAt?.toDate
+              ? formatTimeAgo(item.createdAt.toDate())
+              : ""}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function HomePage() {
   const router = useRouter();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [displayName, setDisplayName] = useState("");
+
+  // Data State
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [activeGroupCount, setActiveGroupCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Notification State
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [justCleared, setJustCleared] = useState(false);
+
   // 1. Auth & User Profile
   useEffect(() => {
-    // Safety timeout: stop loading after 8s if auth doesn't resolve
-    const safetyTimer = setTimeout(() => {
-      setLoading((prev) => {
-        if (prev) {
-          console.warn("Auth listener timed out - force stopping loading");
-          return false;
-        }
-        return prev;
-      });
-    }, 8000);
-
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      clearTimeout(safetyTimer); // Clear timeout on success
       setUser(currentUser);
       if (currentUser) {
-        // Fetch Profile Name
         try {
           const profileSnap = await getDoc(doc(db, "users", currentUser.uid));
           if (profileSnap.exists()) {
@@ -78,8 +122,6 @@ export default function HomePage() {
           } else {
             setDisplayName("Member");
           }
-
-          // Trigger data fetch
           fetchHomeData(currentUser.uid);
         } catch (error) {
           console.error("Error fetching profile", error);
@@ -88,31 +130,38 @@ export default function HomePage() {
         setLoading(false);
       }
     });
-
-    return () => {
-      unsubscribe();
-      clearTimeout(safetyTimer);
-    };
+    return () => unsubscribe();
   }, []);
 
-  // 2. Data Fetching Logic
+  // 2. Fetch Data
   const fetchHomeData = async (userId: string) => {
     try {
-      // A. Get Groups I belong to
-      const q = query(
+      // A. Fetch Announcements
+      const annQuery = query(
+        collection(db, "announcements"),
+        orderBy("createdAt", "desc"),
+        limit(5)
+      );
+      const annSnaps = await getDocs(annQuery);
+      const annList = annSnaps.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Announcement[];
+      setAnnouncements(annList);
+
+      // B. Fetch Groups
+      const groupQuery = query(
         collection(db, "groups"),
         where("members", "array-contains", userId)
       );
-      const groupSnaps = await getDocs(q);
-
+      const groupSnaps = await getDocs(groupQuery);
       setActiveGroupCount(groupSnaps.size);
 
-      // B. For each group, get the last message (This might be read-heavy in large apps, but fine for now)
+      // C. Fetch Recent Messages
       const activityPromises = groupSnaps.docs.map(async (groupDoc) => {
         const groupData = groupDoc.data();
         const groupId = groupDoc.id;
 
-        // Query last message
         const msgQuery = query(
           collection(db, "groups", groupId, "messages"),
           orderBy("createdAt", "desc"),
@@ -122,8 +171,9 @@ export default function HomePage() {
 
         if (!msgSnaps.empty) {
           const msg = msgSnaps.docs[0].data();
-          // Safety check for timestamp (it might be null if serverTimestamp hasn't processed)
-          const timestamp = msg.createdAt?.toDate() || new Date();
+          const timestamp = msg.createdAt?.toDate
+            ? msg.createdAt.toDate()
+            : new Date();
 
           return {
             id: msgSnaps.docs[0].id,
@@ -138,13 +188,10 @@ export default function HomePage() {
         return null;
       });
 
-      // C. Resolve all and sort
       const results = await Promise.all(activityPromises);
       const validActivities = results.filter(
         (item): item is ActivityItem => item !== null
       );
-
-      // Sort: Newest first
       validActivities.sort(
         (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
       );
@@ -155,6 +202,45 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 3. Calculate Unread Count
+  useEffect(() => {
+    if (loading) return;
+
+    // Get the last time the user clicked the bell
+    const lastViewedStr = localStorage.getItem("notifications_last_viewed");
+    const lastViewed = lastViewedStr ? new Date(lastViewedStr) : new Date(0); // Default to epoch if first time
+
+    let count = 0;
+
+    // Count new announcements
+    announcements.forEach((ann) => {
+      const annDate = ann.createdAt?.toDate
+        ? ann.createdAt.toDate()
+        : new Date(0);
+      if (annDate > lastViewed) count++;
+    });
+
+    // Count new messages/activities
+    activities.forEach((act) => {
+      if (act.timestamp > lastViewed) count++;
+    });
+
+    setUnreadCount(count);
+  }, [activities, announcements, loading]);
+
+  // 4. Handle "Mark as Read" (Click Bell)
+  const handleClearNotifications = () => {
+    if (unreadCount === 0) return;
+
+    const now = new Date();
+    localStorage.setItem("notifications_last_viewed", now.toISOString());
+    setUnreadCount(0);
+    setJustCleared(true);
+
+    // Remove the "Check" icon animation after 2 seconds
+    setTimeout(() => setJustCleared(false), 2000);
   };
 
   if (loading) {
@@ -179,12 +265,41 @@ export default function HomePage() {
               Here&apos;s what&apos;s happening
             </p>
           </div>
-          <div className='w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center border border-slate-800 relative'>
-            <Bell size={20} className='text-slate-400' />
-            {/* Notification Dot (Mock) */}
-            <div className='absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full'></div>
-          </div>
+
+          {/* UPDATED: Bell Button clears notifications */}
+          <button
+            onClick={handleClearNotifications}
+            className='w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center border border-slate-800 relative hover:bg-slate-800 transition-colors active:scale-95'
+          >
+            {justCleared ? (
+              <Check size={20} className='text-green-500 animate-in zoom-in' />
+            ) : (
+              <Bell
+                size={20}
+                className={unreadCount > 0 ? "text-white" : "text-slate-400"}
+              />
+            )}
+
+            {/* Red Badge Counter */}
+            {unreadCount > 0 && !justCleared && (
+              <div className='absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-950 animate-in zoom-in'>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </div>
+            )}
+          </button>
         </header>
+
+        {/* Announcements Section */}
+        {announcements.length > 0 && (
+          <div className='mb-8'>
+            <h3 className='text-slate-400 text-xs font-bold uppercase tracking-wider mb-3 ml-1 flex items-center gap-2'>
+              <Megaphone size={12} /> Union Updates
+            </h3>
+            {announcements.map((ann) => (
+              <AnnouncementCard key={ann.id} item={ann} />
+            ))}
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className='grid grid-cols-2 gap-4 mb-8'>
@@ -204,7 +319,7 @@ export default function HomePage() {
             <div className='flex justify-between items-start mb-2'>
               <Activity size={24} className='opacity-80' />
             </div>
-            {/* We count activity items for now */}
+            {/* Show unread count here too if you like, or just total activity */}
             <div className='text-3xl font-bold'>{activities.length}</div>
             <div className='text-sm opacity-80 font-medium'>Recent Updates</div>
           </div>
@@ -265,8 +380,6 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-
-      {/* <BottomNav activeTab='home' /> */}
     </div>
   );
 }
