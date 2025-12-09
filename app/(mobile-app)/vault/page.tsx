@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  Timestamp,
+} from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import {
@@ -24,7 +30,7 @@ interface Resource {
   type: "LINK" | "TEXT" | "FILE";
   category: "General" | "Chants" | "Bylaws" | "Tifo";
   visibility?: "PUBLIC" | "ADMIN"; // Optional because old data might lack it
-  createdAt: any;
+  createdAt: Timestamp | null;
 }
 
 // --- Components ---
@@ -46,7 +52,7 @@ const CategoryBadge = ({ category }: { category: string }) => {
   );
 };
 
-const ResourceIcon = ({ type }: { type: string }) => {
+const ResourceIcon = ({ type }: { type: Resource["type"] }) => {
   switch (type) {
     case "LINK":
       return <LinkIcon size={18} className='text-blue-400' />;
@@ -60,7 +66,7 @@ const ResourceIcon = ({ type }: { type: string }) => {
 };
 
 export default function VaultPage() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [_, setUser] = useState<FirebaseUser | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
 

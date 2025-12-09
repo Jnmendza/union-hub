@@ -110,10 +110,9 @@ export default function AdminDocumentsPage() {
   const [newDesc, setNewDesc] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [newCategory, setNewCategory] = useState("General");
-  const [newType, setNewType] = useState<"LINK" | "TEXT" | "FILE">("LINK");
-  const [newVisibility, setNewVisibility] = useState<"PUBLIC" | "ADMIN">(
-    "PUBLIC"
-  );
+  const [newType, setNewType] = useState<Resource["type"]>("LINK");
+  const [newVisibility, setNewVisibility] =
+    useState<Resource["visibility"]>("PUBLIC");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // 1. Auth Listener
@@ -260,7 +259,7 @@ export default function AdminDocumentsPage() {
             Documents & Resources
           </h1>
           <p className='text-slate-500 text-sm'>
-            Manage "The Vault" content for members
+            Manage &quot;The Vault&quot; content for members
           </p>
         </div>
         <button
@@ -428,7 +427,9 @@ export default function AdminDocumentsPage() {
                   </label>
                   <select
                     value={newVisibility}
-                    onChange={(e) => setNewVisibility(e.target.value as any)}
+                    onChange={(e) =>
+                      setNewVisibility(e.target.value as Resource["visibility"])
+                    }
                     className='w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
                   >
                     <option value='PUBLIC'>Public (Everyone)</option>
@@ -459,7 +460,7 @@ export default function AdminDocumentsPage() {
                 <select
                   value={newType}
                   onChange={(e) => {
-                    setNewType(e.target.value as any);
+                    setNewType(e.target.value as Resource["type"]);
                     if (!editId) {
                       setNewUrl("");
                       setSelectedFile(null);

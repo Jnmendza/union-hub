@@ -11,16 +11,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import {
-  Search,
-  Edit2,
-  Check,
-  X,
-  Shield,
-  User,
-  Trash2,
-  Save,
-} from "lucide-react";
+import { Search, Edit2, X, Shield, User, Trash2, Save } from "lucide-react";
 
 interface UserData {
   id: string;

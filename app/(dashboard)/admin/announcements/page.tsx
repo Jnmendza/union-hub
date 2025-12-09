@@ -70,9 +70,7 @@ export default function AdminAnnouncementsPage() {
   // Form State
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState<"URGENT" | "EVENT" | "GENERAL">(
-    "GENERAL"
-  );
+  const [category, setCategory] = useState<Announcement["category"]>("GENERAL");
 
   // 1. Auth Listener
   useEffect(() => {
@@ -317,7 +315,9 @@ export default function AdminAnnouncementsPage() {
                     <button
                       key={cat}
                       type='button'
-                      onClick={() => setCategory(cat as any)}
+                      onClick={() =>
+                        setCategory(cat as Announcement["category"])
+                      }
                       className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors ${
                         category === cat
                           ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900"

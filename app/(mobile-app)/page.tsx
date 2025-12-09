@@ -261,7 +261,9 @@ export default function HomePage() {
             <h1 className='text-2xl font-bold text-white'>
               {user ? `Hello, ${displayName}` : "Welcome"}
             </h1>
-            <p className='text-slate-400 text-sm'>Here's what's happening</p>
+            <p className='text-slate-400 text-sm'>
+              Here&apos;s what&apos;s happening
+            </p>
           </div>
 
           {/* UPDATED: Bell Button clears notifications */}
