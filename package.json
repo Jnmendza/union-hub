@@ -4,14 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "db:push:prod": "dotenv -e .env.production -- npx prisma db push"
+    "lint": "next lint"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
-    "@supabase/ssr": "^0.8.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
