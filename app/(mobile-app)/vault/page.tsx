@@ -1,27 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp,
-  Timestamp,
-} from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth, db, storage } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import {
   Folder,
   FileText,
   Link as LinkIcon,
-  Plus,
   Search,
   ExternalLink,
   X,
-  UploadCloud,
   File,
   Eye,
 } from "lucide-react";
@@ -34,8 +23,8 @@ interface Resource {
   url: string;
   type: "LINK" | "TEXT" | "FILE";
   category: "General" | "Chants" | "Bylaws" | "Tifo";
-  createdBy: string;
-  createdAt: Timestamp;
+  visibility?: "PUBLIC" | "ADMIN"; // Optional because old data might lack it
+  createdAt: any;
 }
 
 // --- Components ---
@@ -78,17 +67,7 @@ export default function VaultPage() {
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [showAddModal, setShowAddModal] = useState(false);
   const [viewingResource, setViewingResource] = useState<Resource | null>(null);
-
-  // Form State
-  const [newTitle, setNewTitle] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newUrl, setNewUrl] = useState("");
-  const [newCategory, setNewCategory] = useState("General");
-  const [newType, setNewType] = useState<Resource["type"]>("LINK");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   // 1. Auth
   useEffect(() => {
@@ -96,17 +75,27 @@ export default function VaultPage() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Resources (Firestore)
+  // 2. Fetch Resources (Read-Only)
   useEffect(() => {
+    // FIX: Removed 'where' clause. We fetch ALL items sorted by date.
+    // This avoids "Missing Index" errors and handles old data gracefully.
     const q = query(collection(db, "resources"), orderBy("createdAt", "desc"));
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const items = snapshot.docs.map((doc) => ({
+        const allItems = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         })) as Resource[];
-        setResources(items);
+
+        // FIX: Client-side Filter
+        // Show if visibility is PUBLIC OR if visibility field is missing (old data)
+        const publicItems = allItems.filter(
+          (item) => item.visibility === "PUBLIC" || !item.visibility
+        );
+
+        setResources(publicItems);
         setLoading(false);
       },
       (error) => {
@@ -116,53 +105,6 @@ export default function VaultPage() {
     );
     return () => unsubscribe();
   }, []);
-
-  // 3. Add Resource Handler
-  const handleAddResource = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !newTitle.trim()) return;
-
-    setSubmitting(true);
-    try {
-      let finalUrl = newUrl;
-
-      // A. Upload File to Firebase Storage
-      if (newType === "FILE" && selectedFile) {
-        // const fileExt = selectedFile.name.split(".").pop();
-        const storageRef = ref(
-          storage,
-          `vault/${user.uid}/${Date.now()}_${selectedFile.name}`
-        );
-        const snapshot = await uploadBytes(storageRef, selectedFile);
-        finalUrl = await getDownloadURL(snapshot.ref);
-      }
-
-      // B. Save to Firestore
-      await addDoc(collection(db, "resources"), {
-        title: newTitle,
-        description: newDesc,
-        url: finalUrl,
-        type: newType,
-        category: newCategory,
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
-      });
-
-      setShowAddModal(false);
-      // Reset form
-      setNewTitle("");
-      setNewDesc("");
-      setNewUrl("");
-      setSelectedFile(null);
-      setNewCategory("General");
-      setNewType("LINK");
-    } catch (error) {
-      console.error("Error adding resource:", error);
-      alert("Could not add resource. Check console.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   // --- Filtering ---
   const filteredResources = resources.filter((res) => {
@@ -191,14 +133,10 @@ export default function VaultPage() {
       <div className='flex justify-between items-center mb-6 pt-4'>
         <div>
           <h1 className='text-2xl font-bold text-white'>The Vault</h1>
-          <p className='text-slate-400 text-sm'>Group resources & assets</p>
+          <p className='text-slate-400 text-sm'>
+            Official Documents & Resources
+          </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className='bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-colors shadow-lg shadow-blue-900/20'
-        >
-          <Plus size={24} />
-        </button>
       </div>
 
       {/* Search & Filter */}
@@ -240,9 +178,6 @@ export default function VaultPage() {
           <div className='text-center py-12 border-2 border-dashed border-slate-800 rounded-2xl'>
             <Folder size={48} className='mx-auto text-slate-700 mb-3' />
             <p className='text-slate-500 font-medium'>No items found</p>
-            <p className='text-slate-600 text-sm mt-1'>
-              Try adjusting filters or add a new item.
-            </p>
           </div>
         ) : (
           filteredResources.map((item) => (
@@ -264,6 +199,7 @@ export default function VaultPage() {
                   {item.description || "No description provided."}
                 </p>
 
+                {/* Action Link/Button */}
                 {item.type === "TEXT" ? (
                   <button
                     onClick={() => setViewingResource(item)}
@@ -290,149 +226,6 @@ export default function VaultPage() {
         )}
       </div>
 
-      {/* Add Resource Modal */}
-      {showAddModal && (
-        <div className='fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4'>
-          <div className='bg-slate-950 w-full max-w-md rounded-t-2xl sm:rounded-2xl border-t sm:border border-slate-800 p-6 animate-in slide-in-from-bottom-10 duration-200'>
-            <div className='flex justify-between items-center mb-6'>
-              <h2 className='text-xl font-bold text-white'>Add to Vault</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className='p-1 bg-slate-900 rounded-full text-slate-400'
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddResource} className='space-y-4'>
-              <div>
-                <label className='text-xs font-medium text-slate-400 ml-1'>
-                  Title
-                </label>
-                <input
-                  type='text'
-                  required
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className='w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500'
-                  placeholder='e.g. 2024 Season Chant Sheet'
-                />
-              </div>
-
-              <div className='grid grid-cols-2 gap-4'>
-                <div>
-                  <label className='text-xs font-medium text-slate-400 ml-1'>
-                    Category
-                  </label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className='w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 appearance-none'
-                  >
-                    <option>General</option>
-                    <option>Chants</option>
-                    <option>Bylaws</option>
-                    <option>Tifo</option>
-                  </select>
-                </div>
-                <div>
-                  <label className='text-xs font-medium text-slate-400 ml-1'>
-                    Type
-                  </label>
-                  <select
-                    value={newType}
-                    onChange={(e) => {
-                      setNewType(e.target.value as Resource["type"]);
-                      setNewUrl("");
-                      setSelectedFile(null);
-                    }}
-                    className='w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 appearance-none'
-                  >
-                    <option value='LINK'>Link</option>
-                    <option value='FILE'>File</option>
-                    <option value='TEXT'>Text</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Conditional Input based on Type */}
-              <div>
-                <label className='text-xs font-medium text-slate-400 ml-1'>
-                  {newType === "FILE"
-                    ? "Upload File"
-                    : newType === "TEXT"
-                    ? "Content"
-                    : "URL"}
-                </label>
-
-                {newType === "FILE" ? (
-                  <div className='relative'>
-                    <input
-                      type='file'
-                      onChange={(e) =>
-                        setSelectedFile(
-                          e.target.files ? e.target.files[0] : null
-                        )
-                      }
-                      className='hidden'
-                      id='file-upload'
-                    />
-                    <label
-                      htmlFor='file-upload'
-                      className='flex items-center justify-center gap-2 w-full bg-slate-900 border border-dashed border-slate-700 rounded-xl px-4 py-6 text-slate-400 hover:bg-slate-800 hover:border-slate-500 cursor-pointer transition-colors'
-                    >
-                      <UploadCloud size={20} />
-                      <span className='text-sm truncate'>
-                        {selectedFile
-                          ? selectedFile.name
-                          : "Tap to select file"}
-                      </span>
-                    </label>
-                  </div>
-                ) : newType === "TEXT" ? (
-                  <textarea
-                    value={newUrl}
-                    onChange={(e) => setNewUrl(e.target.value)}
-                    className='w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 h-32 resize-none'
-                    placeholder='Type your text content here...'
-                  />
-                ) : (
-                  <input
-                    type='text'
-                    value={newUrl}
-                    onChange={(e) => setNewUrl(e.target.value)}
-                    className='w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500'
-                    placeholder='https://...'
-                  />
-                )}
-              </div>
-
-              {newType !== "TEXT" && (
-                <div>
-                  <label className='text-xs font-medium text-slate-400 ml-1'>
-                    Description
-                  </label>
-                  <textarea
-                    value={newDesc}
-                    onChange={(e) => setNewDesc(e.target.value)}
-                    className='w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 h-20 resize-none'
-                    placeholder='Optional details...'
-                  />
-                </div>
-              )}
-
-              <button
-                type='submit'
-                disabled={submitting || (newType === "FILE" && !selectedFile)}
-                className='w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl mt-2 disabled:opacity-50 disabled:cursor-not-allowed'
-              >
-                {submitting ? "Saving..." : "Add Resource"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Read Text Modal */}
       {viewingResource && (
         <div className='fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4'>
@@ -445,7 +238,11 @@ export default function VaultPage() {
                 <div className='flex gap-2 mt-1'>
                   <CategoryBadge category={viewingResource.category} />
                   <span className='text-xs text-slate-500 py-0.5'>
-                    {viewingResource.createdAt?.toDate().toLocaleDateString()}
+                    {viewingResource.createdAt?.seconds
+                      ? new Date(
+                          viewingResource.createdAt.seconds * 1000
+                        ).toLocaleDateString()
+                      : "Unknown Date"}
                   </span>
                 </div>
               </div>

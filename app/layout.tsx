@@ -21,7 +21,7 @@ export default function RootLayout({
       {/* 1. bg-slate-200: Sets a darker background for the 'desktop' area outside the app
        */}
       <body
-        className={`${inter.className} flex min-h-screen justify-center bg-slate-200 text-slate-900 antialiased dark:bg-slate-950`}
+        className={`${inter.className} min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-slate-950`}
       >
         <ThemeProvider
           attribute='class'
@@ -35,11 +35,7 @@ export default function RootLayout({
           - min-h-screen: Ensures the white background goes to the bottom
           - shadow-2xl: Adds depth so it pops off the desktop background
         */}
-          <div className='relative w-full max-w-md bg-slate-50 shadow-2xl ring-1 ring-slate-900/5 dark:bg-slate-950 dark:ring-white/10'>
-            <AuthProvider>
-              <main>{children}</main>
-            </AuthProvider>
-          </div>
+          <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>
     </html>

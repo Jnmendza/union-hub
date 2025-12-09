@@ -21,9 +21,9 @@ import { cn } from "@/lib/utils";
 // Types
 interface Message {
   id: string;
-  text: string; // Firestore uses 'text' based on our schema
+  text: string;
   senderId: string;
-  createdAt: Timestamp | null; // Firestore Timestamp
+  createdAt: Timestamp | null;
 }
 
 interface UserProfile {
@@ -54,33 +54,37 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
       orderBy("createdAt", "asc")
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Message[];
+    // Added Error Handling to the Snapshot Listener
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const msgs = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Message[];
 
-      setMessages(msgs);
+        setMessages(msgs);
 
-      // Auto-scroll on new message
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({
-          top: scrollRef.current.scrollHeight,
-          behavior: "smooth",
-        });
-      }, 100);
-    });
+        // Auto-scroll on new message
+        setTimeout(() => {
+          scrollRef.current?.scrollTo({
+            top: scrollRef.current.scrollHeight,
+            behavior: "smooth",
+          });
+        }, 100);
+      },
+      (error) => {
+        console.error("Chat Snapshot Error:", error);
+      }
+    );
 
     return () => unsubscribe();
   }, [groupId]);
 
-  // 2. Fetch Sender Profiles (Client-Side Join)
-  // Firestore messages only have senderId. We need to look up names.
+  // 2. Fetch Sender Profiles
   useEffect(() => {
     const fetchMissingProfiles = async () => {
       const uniqueSenderIds = [...new Set(messages.map((m) => m.senderId))];
-
-      // Filter out IDs we already know or is current user (optional)
       const idsToFetch = uniqueSenderIds.filter(
         (id) => !senderProfiles[id] && id !== currentUserId
       );
@@ -110,14 +114,31 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
     if (messages.length > 0) fetchMissingProfiles();
   }, [messages, currentUserId, senderProfiles]);
 
-  // 3. Handle Send
+  // 3. Handle Send (Optimistic Updates Added)
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !groupId || !currentUserId) return;
 
     const textToSend = inputText;
     setInputText(""); // Clear UI immediately
     setIsSending(true);
+
+    // Optimistic Update: Show message immediately
+    const optimisticMsg: Message = {
+      id: "optimistic-" + Date.now(),
+      text: textToSend,
+      senderId: currentUserId,
+      createdAt: null, // Pending timestamp
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    // Scroll immediately
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 10);
 
     try {
       await addDoc(collection(db, "groups", groupId, "messages"), {
@@ -125,11 +146,13 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
         senderId: currentUserId,
         createdAt: serverTimestamp(),
       });
-      // No need to manually update state, the onSnapshot listener will catch it instantly
+      // Success: onSnapshot will take over and replace the optimistic message
     } catch (error) {
       console.error("Error sending message:", error);
-      // Optional: Restore text if error
-      setInputText(textToSend);
+      // remove the optimistic message on failure or show error state
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      alert("Failed to send message. Check console for permission errors.");
+      setInputText(textToSend); // Restore text
     } finally {
       setIsSending(false);
     }
@@ -142,6 +165,12 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
         ref={scrollRef}
         className='flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar'
       >
+        {messages.length === 0 && (
+          <div className='flex h-full items-center justify-center text-slate-500 text-sm'>
+            No messages yet. Say hello!
+          </div>
+        )}
+
         {messages.map((msg) => {
           const isMe = msg.senderId === currentUserId;
           const profile = senderProfiles[msg.senderId];
@@ -154,7 +183,9 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
                 "flex w-max max-w-[75%] flex-col rounded-2xl px-4 py-2 text-sm shadow-sm animate-in fade-in slide-in-from-bottom-2",
                 isMe
                   ? "self-end bg-blue-600 text-white rounded-br-none"
-                  : "self-start bg-slate-800 text-slate-200 rounded-bl-none"
+                  : "self-start bg-slate-800 text-slate-200 rounded-bl-none",
+                // Opacity for pending messages
+                msg.createdAt === null && "opacity-70"
               )}
             >
               {!isMe && (
@@ -174,7 +205,7 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
                       hour: "2-digit",
                       minute: "2-digit",
                     })
-                  : "..."}
+                  : "Sending..."}
               </span>
             </div>
           );
