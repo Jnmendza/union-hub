@@ -1,28 +1,35 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "../globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import { AdminSidebar } from '../(components)/admin-sidebar'
 
-export const metadata: Metadata = {
-  title: "Union Dashboard",
-  description: "Official dashboard",
-
-};
-
-export default function RootLayout({
+export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
+  // 1. Security Check: Ensure user is actually an Admin/Board member
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id }
+  })
+
+  if (!dbUser || (dbUser.role !== 'ADMIN' && dbUser.role !== 'BOARD')) {
+    // If they aren't admin, kick them back to the mobile app
+    redirect('/')
+  }
+
   return (
-    <div
-      className={`${inter.className} flex min-h-screen justify-center bg-slate-200 text-slate-900 antialiased dark:bg-slate-950`}
-    >
-      {/* Centered "device" shell to mimic the phone UI without redefining <html>/<body> */}
-      <div className='relative w-full max-w-md bg-slate-50 shadow-2xl ring-1 ring-slate-900/5 dark:bg-slate-950 dark:ring-white/10'>
-        <main className='pb-24'>{children}</main>
-      </div>
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
+      <AdminSidebar />
+      <main className="flex-1 overflow-y-auto p-8">
+        {children}
+      </main>
     </div>
-  );
+  )
 }
