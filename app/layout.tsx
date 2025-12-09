@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./(components)/theme-provider";
+import AuthProvider from "./(components)/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,7 +36,9 @@ export default function RootLayout({
           - shadow-2xl: Adds depth so it pops off the desktop background
         */}
           <div className='relative w-full max-w-md bg-slate-50 shadow-2xl ring-1 ring-slate-900/5 dark:bg-slate-950 dark:ring-white/10'>
-            <main>{children}</main>
+            <AuthProvider>
+              <main>{children}</main>
+            </AuthProvider>
           </div>
         </ThemeProvider>
       </body>

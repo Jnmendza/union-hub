@@ -2,10 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
-
 import {
+  onAuthStateChanged,
+  signOut,
+  User as FirebaseUser,
+} from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
+import {
+  Save,
   Camera,
   LogOut,
   QrCode,
@@ -20,6 +25,7 @@ import {
 } from "lucide-react";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
   // Data State
@@ -88,14 +94,18 @@ export default function ProfilePage() {
     }
   };
 
+  // 3. Sign Out Handler (PURE FIREBASE)
   const handleSignOut = async () => {
-    await auth.signOut();
-    window.location.href = "/";
+    try {
+      await signOut(auth); // Firebase native sign out
+      router.push("/login"); // Force redirect
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const handleCopyId = (text: string) => {
     if (!text) return;
-    // Using execCommand for iframe compatibility
     const textArea = document.createElement("textarea");
     textArea.value = text;
     document.body.appendChild(textArea);
@@ -145,13 +155,12 @@ export default function ProfilePage() {
   }
 
   return (
-    // Updated container to respond to darkMode state
     <div
       className={`min-h-screen pb-24 transition-colors duration-300 ${
         darkMode ? "bg-slate-950 text-slate-200" : "bg-slate-100 text-slate-900"
       }`}
     >
-      {/* Header - Removed Edit button from here */}
+      {/* Header */}
       <div className='p-6 pt-12 flex justify-between items-center'>
         <h1
           className={`text-2xl font-bold ${
@@ -160,8 +169,7 @@ export default function ProfilePage() {
         >
           My ID
         </h1>
-        <div className='w-8'></div>{" "}
-        {/* Spacer to keep title centered/aligned if needed, or just empty */}
+        <div className='w-8'></div>
       </div>
 
       {/* Main Card */}
@@ -173,7 +181,6 @@ export default function ProfilePage() {
               : "bg-white border-slate-200 shadow-xl"
           } border rounded-3xl p-6 relative overflow-hidden transition-all duration-300`}
         >
-          {/* Background Decoration */}
           <div className='absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none'></div>
 
           <div className='flex items-center gap-5 relative z-10'>
@@ -231,7 +238,6 @@ export default function ProfilePage() {
                     {status || "No status set"}
                   </p>
 
-                  {/* Clickable ID Badge */}
                   <button
                     onClick={() => handleCopyId(user?.uid || "")}
                     className={`mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border transition-colors active:scale-95 ${
@@ -247,7 +253,6 @@ export default function ProfilePage() {
                     <Copy size={10} className='text-slate-500' />
                   </button>
 
-                  {/* Success Toast (Small inline feedback) */}
                   {successMsg === "ID Copied!" && (
                     <span className='ml-2 text-xs text-green-500 font-medium animate-in fade-in slide-in-from-left-2'>
                       Copied!
@@ -258,7 +263,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Action Row - Edit Mode Buttons Updated */}
           <div className='mt-6'>
             {isEditing ? (
               <div className='flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200'>
@@ -310,13 +314,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Settings Section */}
       <div className='px-6 space-y-1'>
         <h3 className='text-slate-500 text-xs font-bold uppercase tracking-wider mb-3 ml-2'>
           App Settings
         </h3>
-
-        {/* Night Mode */}
         <div
           className={`${
             darkMode
@@ -353,8 +354,6 @@ export default function ProfilePage() {
             />
           </button>
         </div>
-
-        {/* Notifications */}
         <div
           className={`${
             darkMode
@@ -376,8 +375,6 @@ export default function ProfilePage() {
           </div>
           <ChevronRight size={20} className='text-slate-600' />
         </div>
-
-        {/* Privacy */}
         <div
           className={`${
             darkMode
@@ -401,7 +398,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Sign Out */}
       <div className='px-6 mt-8'>
         <button
           onClick={handleSignOut}
@@ -411,7 +407,7 @@ export default function ProfilePage() {
           <span className='font-medium'>Sign Out</span>
         </button>
         <p className='text-center text-slate-700 text-xs mt-4'>
-          Version 1.0.4 • Chavos SG
+          Version 1.0.4 • Union Hub
         </p>
       </div>
     </div>

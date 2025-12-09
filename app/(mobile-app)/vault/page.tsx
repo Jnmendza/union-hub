@@ -1,10 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-// Removed Firestore imports
-import { createClient } from "@supabase/supabase-js";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
+  Timestamp,
+} from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth } from "@/lib/firebase"; // Removed db import
+import { auth, db, storage } from "@/lib/firebase";
 import {
   Folder,
   FileText,
@@ -18,21 +26,16 @@ import {
   Eye,
 } from "lucide-react";
 
-// --- Supabase Client Init ---
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 // --- Types ---
-// Matches your Supabase/Prisma structure roughly
 interface Resource {
   id: string;
   title: string;
-  description: string | null;
+  description: string;
   url: string;
-  type: "LINK" | "TEXT" | "FILE"; // Ensure your DB Enum supports these or is a String
+  type: "LINK" | "TEXT" | "FILE";
   category: "General" | "Chants" | "Bylaws" | "Tifo";
-  createdAt: string; // Supabase returns ISO strings
+  createdBy: string;
+  createdAt: Timestamp;
 }
 
 // --- Components ---
@@ -54,7 +57,7 @@ const CategoryBadge = ({ category }: { category: string }) => {
   );
 };
 
-const ResourceIcon = ({ type }: { type: Resource["type"] }) => {
+const ResourceIcon = ({ type }: { type: string }) => {
   switch (type) {
     case "LINK":
       return <LinkIcon size={18} className='text-blue-400' />;
@@ -87,35 +90,31 @@ export default function VaultPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // 1. Auth (Firebase)
+  // 1. Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Resources (Supabase)
-  const fetchResources = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("Resource") // Make sure table name matches exactly (Case Sensitive)
-        .select("*")
-        .order("createdAt", { ascending: false });
-
-      if (error) throw error;
-
-      if (data) {
-        setResources(data as Resource[]);
-      }
-    } catch (error) {
-      console.error("Error fetching resources:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 2. Fetch Resources (Firestore)
   useEffect(() => {
-    fetchResources();
+    const q = query(collection(db, "resources"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const items = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Resource[];
+        setResources(items);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching vault resources:", error);
+        setLoading(false);
+      }
+    );
+    return () => unsubscribe();
   }, []);
 
   // 3. Add Resource Handler
@@ -127,53 +126,39 @@ export default function VaultPage() {
     try {
       let finalUrl = newUrl;
 
-      // A. Upload File to Supabase Storage (if needed)
+      // A. Upload File to Firebase Storage
       if (newType === "FILE" && selectedFile) {
         const fileExt = selectedFile.name.split(".").pop();
-        const fileName = `${user.uid}/${Date.now()}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("vault")
-          .upload(fileName, selectedFile);
-
-        if (uploadError) throw uploadError;
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("vault").getPublicUrl(fileName);
-
-        finalUrl = publicUrl;
+        const storageRef = ref(
+          storage,
+          `vault/${user.uid}/${Date.now()}_${selectedFile.name}`
+        );
+        const snapshot = await uploadBytes(storageRef, selectedFile);
+        finalUrl = await getDownloadURL(snapshot.ref);
       }
 
-      // B. Insert Row into Supabase Table
-      const { error: insertError } = await supabase.from("Resource").insert([
-        {
-          title: newTitle,
-          description: newDesc,
-          url: finalUrl,
-          type: newType,
-          category: newCategory,
-          // size: selectedFile ? (selectedFile.size / 1024).toFixed(2) + ' KB' : null, // Optional if schema has it
-          // createdBy: user.uid // Only add this if your 'Resource' table has a userId column
-        },
-      ]);
+      // B. Save to Firestore
+      await addDoc(collection(db, "resources"), {
+        title: newTitle,
+        description: newDesc,
+        url: finalUrl,
+        type: newType,
+        category: newCategory,
+        createdBy: user.uid,
+        createdAt: serverTimestamp(),
+      });
 
-      if (insertError) throw insertError;
-
-      // Success Cleanup
       setShowAddModal(false);
+      // Reset form
       setNewTitle("");
       setNewDesc("");
       setNewUrl("");
       setSelectedFile(null);
       setNewCategory("General");
       setNewType("LINK");
-
-      // Refresh list
-      fetchResources();
     } catch (error) {
       console.error("Error adding resource:", error);
-      alert("Could not add resource. Check console for details.");
+      alert("Could not add resource. Check console.");
     } finally {
       setSubmitting(false);
     }
@@ -183,7 +168,7 @@ export default function VaultPage() {
   const filteredResources = resources.filter((res) => {
     const matchesSearch =
       res.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (res.description || "").toLowerCase().includes(searchTerm.toLowerCase());
+      res.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
       selectedCategory === "All" || res.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -191,7 +176,7 @@ export default function VaultPage() {
 
   const categories = ["All", "General", "Chants", "Bylaws", "Tifo"];
 
-  if (loading && resources.length === 0) {
+  if (loading) {
     return (
       <div className='flex flex-col items-center justify-center h-full min-h-[50vh] text-slate-500'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4'></div>
@@ -279,7 +264,6 @@ export default function VaultPage() {
                   {item.description || "No description provided."}
                 </p>
 
-                {/* Action Link/Button */}
                 {item.type === "TEXT" ? (
                   <button
                     onClick={() => setViewingResource(item)}
@@ -358,7 +342,7 @@ export default function VaultPage() {
                   <select
                     value={newType}
                     onChange={(e) => {
-                      setNewType(e.target.value as Resource["type"]);
+                      setNewType(e.target.value as any);
                       setNewUrl("");
                       setSelectedFile(null);
                     }}
@@ -423,7 +407,6 @@ export default function VaultPage() {
                 )}
               </div>
 
-              {/* Description - HIDE if type is TEXT (redundant) */}
               {newType !== "TEXT" && (
                 <div>
                   <label className='text-xs font-medium text-slate-400 ml-1'>
@@ -462,7 +445,7 @@ export default function VaultPage() {
                 <div className='flex gap-2 mt-1'>
                   <CategoryBadge category={viewingResource.category} />
                   <span className='text-xs text-slate-500 py-0.5'>
-                    {new Date(viewingResource.createdAt).toLocaleDateString()}
+                    {viewingResource.createdAt?.toDate().toLocaleDateString()}
                   </span>
                 </div>
               </div>
