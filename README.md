@@ -51,16 +51,15 @@ A Firebase project created at console.firebase.google.com.
 2. Installation
 
 # Clone the repository
-
 git clone [https://github.com/yourusername/union-hub.git](https://github.com/yourusername/union-hub.git)
 
 # Enter the directory
-
 cd union-hub
 
 # Install dependencies
-
 npm install
+
+
 
 3. Environment Setup
 
@@ -72,6 +71,8 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID="your_project_id"
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your_project_id.firebasestorage.app"
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your_sender_id"
 NEXT_PUBLIC_FIREBASE_APP_ID="your_app_id"
+
+
 
 4. Firebase Configuration (Critical)
 
@@ -91,14 +92,14 @@ Go to the Rules tab and paste the following:
 
 rules_version = '2';
 service cloud.firestore {
-match /databases/{database}/documents {
+  match /databases/{database}/documents {
 
     // 1. USER PROFILES
     match /users/{userId} {
       allow read: if request.auth != null;
       // Allow write if owner OR admin
       allow write: if request.auth != null && (
-        request.auth.uid == userId ||
+        request.auth.uid == userId || 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN'
       );
     }
@@ -127,9 +128,10 @@ match /databases/{database}/documents {
       allow read: if request.auth != null;
       allow write: if request.auth != null; // Ideally restrict to ADMIN
     }
+  }
+}
 
-}
-}
+
 
 C. Storage (For File Uploads)
 
@@ -140,24 +142,56 @@ Fix CORS Error: By default, Firebase blocks uploads from localhost. Run this in 
 echo '[{"origin": ["*"],"method": ["GET", "HEAD", "PUT", "POST", "DELETE"],"maxAgeSeconds": 3600}]' > cors.json
 gsutil cors set cors.json gs://YOUR_BUCKET_NAME.appspot.com
 
+
+
 5. Run the App
 
 npm run dev
 
+
+
 Open http://localhost:3000 to see the app.
+
+6. Development vs. Production Setup
+
+To safely manage data without accidentally deleting real user information, it is recommended to set up two separate Firebase projects.
+
+Create Two Projects: Go to the Firebase Console and create:
+
+union-hub-dev (For local development and testing)
+
+union-hub-prod (For the live application)
+
+Local Development (.env.local):
+
+Copy the config keys from union-hub-dev.
+
+Paste them into your local .env.local file.
+
+Running npm run dev will now connect to the Dev database.
+
+Production Deployment (Vercel):
+
+Go to your Vercel Dashboard -> Project Settings -> Environment Variables.
+
+Add the keys from union-hub-prod.
+
+When you deploy, the live site will automatically connect to the Prod database.
 
 📂 Project Structure
 
 app/
-├── (auth)/ # Login, Register, Forgot Password pages
-├── (dashboard)/ # ADMIN Panel Layout & Pages
-│ └── admin/ # /admin/users, /admin/documents, etc.
-├── (mobile-app)/ # MAIN App Layout (Mobile Nav)
-│ ├── groups/ # Chat functionality
-│ ├── profile/ # User ID & QR Code
-│ ├── vault/ # Resource Library
-│ └── page.tsx # Home Feed
-└── layout.tsx # Root layout
+├── (auth)/             # Login, Register, Forgot Password pages
+├── (dashboard)/        # ADMIN Panel Layout & Pages
+│   └── admin/          # /admin/users, /admin/documents, etc.
+├── (mobile-app)/       # MAIN App Layout (Mobile Nav)
+│   ├── groups/         # Chat functionality
+│   ├── profile/        # User ID & QR Code
+│   ├── vault/          # Resource Library
+│   └── page.tsx        # Home Feed
+└── layout.tsx          # Root layout
+
+
 
 🛡️ Roles & Permissions
 
