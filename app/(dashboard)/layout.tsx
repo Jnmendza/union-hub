@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
-import { AdminSidebar } from "../(components)/admin-sidebar"; // Ensure path is correct
+import { AdminSidebar } from "../(components)/admin-sidebar";
+import { useUnion } from "../(components)/union-provider";
 
 export default function DashboardLayout({
   children,
@@ -13,56 +11,35 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
+  const { currentUnion, isLoading } = useUnion();
+  // Derived state for authorization
+  const isAuthorized = currentUnion?.role === "ADMIN";
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+    // 1. Wait for Union Provider to finish loading
+    if (isLoading) return;
 
-      try {
-        // 1. Fetch user profile from Firestore
-        const profileSnap = await getDoc(doc(db, "users", user.uid));
+    // 2. Check if we have a union selected
+    if (!currentUnion) {
+      router.push("/");
+      return;
+    }
 
-        if (profileSnap.exists()) {
-          const userData = profileSnap.data();
+    // 3. Check Role (Must be ADMIN to see this layout)
+    if (!isAuthorized) {
+      console.log("Access Denied: You are not an Admin of this Union.");
+      router.push("/");
+    }
+  }, [currentUnion, isLoading, router, isAuthorized]);
 
-          // 2. Check Role (Matches your old logic: ADMIN or BOARD)
-          if (userData.role === "ADMIN" || userData.role === "BOARD") {
-            setAuthorized(true);
-          } else {
-            // Not authorized? Kick them back to the main app
-            router.push("/");
-          }
-        } else {
-          // No profile? Kick them out.
-          router.push("/");
-        }
-      } catch (error) {
-        console.error("Error checking admin role:", error);
-        router.push("/");
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
-
-  if (loading) {
+  // Show loading while checking permissions
+  if (isLoading || !isAuthorized) {
     return (
-      <div className='min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900'>
+      <div className='min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500'></div>
       </div>
     );
   }
-
-  // If we get here and authorized is false, the router is already redirecting.
-  // We return null to prevent flashing restricted content.
-  if (!authorized) return null;
 
   return (
     <div className='flex min-h-screen bg-slate-50 dark:bg-slate-900'>

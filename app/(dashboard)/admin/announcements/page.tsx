@@ -5,7 +5,7 @@ import {
   collection,
   addDoc,
   deleteDoc,
-  updateDoc, // <--- Added
+  updateDoc,
   doc,
   onSnapshot,
   query,
@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
+
 import {
   Megaphone,
   Plus,
@@ -23,8 +24,9 @@ import {
   AlertCircle,
   Info,
   X,
-  Edit, // <--- Added Edit
+  Edit,
 } from "lucide-react";
+import { useUnion } from "@/app/(components)/union-provider";
 
 // --- Types ---
 interface Announcement {
@@ -37,7 +39,11 @@ interface Announcement {
 }
 
 // --- Components ---
-const CategoryBadge = ({ category }: { category: string }) => {
+const CategoryBadge = ({
+  category,
+}: {
+  category: Announcement["category"];
+}) => {
   const styles: Record<string, string> = {
     URGENT:
       "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
@@ -58,19 +64,22 @@ const CategoryBadge = ({ category }: { category: string }) => {
 };
 
 export default function AdminAnnouncementsPage() {
+  const { currentUnion } = useUnion();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Modal State
-  const [showModal, setShowModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null); // <--- Added Edit State
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [editId, setEditId] = useState<string | null>(null);
 
   // Form State
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [category, setCategory] = useState<Announcement["category"]>("GENERAL");
+  const [title, setTitle] = useState<string>("");
+  const [content, setContent] = useState<string>("");
+  const [category, setCategory] = useState<"URGENT" | "EVENT" | "GENERAL">(
+    "GENERAL"
+  );
 
   // 1. Auth Listener
   useEffect(() => {
@@ -78,12 +87,16 @@ export default function AdminAnnouncementsPage() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Announcements
+  // 2. Fetch Announcements (Scoped to Union)
   useEffect(() => {
+    if (!currentUnion) return; // Wait for union to load
+
+    // FIX: Path is now unions/{id}/announcements
     const q = query(
-      collection(db, "announcements"),
+      collection(db, "unions", currentUnion.id, "announcements"),
       orderBy("createdAt", "desc")
     );
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -101,7 +114,7 @@ export default function AdminAnnouncementsPage() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUnion]);
 
   // --- Helpers for Modal ---
   const openCreateModal = () => {
@@ -120,30 +133,35 @@ export default function AdminAnnouncementsPage() {
     setShowModal(true);
   };
 
-  // 3. Submit Handler (Create or Update)
+  // 3. Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !title.trim()) return;
+    if (!user || !title.trim() || !currentUnion) return;
 
     setSubmitting(true);
     try {
       if (editId) {
-        // UPDATE
-        await updateDoc(doc(db, "announcements", editId), {
-          title,
-          content,
-          category,
-          // We usually don't update authorId or createdAt on edit
-        });
+        // UPDATE: unions/{uid}/announcements/{aid}
+        await updateDoc(
+          doc(db, "unions", currentUnion.id, "announcements", editId),
+          {
+            title,
+            content,
+            category,
+          }
+        );
       } else {
-        // CREATE
-        await addDoc(collection(db, "announcements"), {
-          title,
-          content,
-          category,
-          authorId: user.uid,
-          createdAt: serverTimestamp(),
-        });
+        // CREATE: unions/{uid}/announcements
+        await addDoc(
+          collection(db, "unions", currentUnion.id, "announcements"),
+          {
+            title,
+            content,
+            category,
+            authorId: user.uid,
+            createdAt: serverTimestamp(),
+          }
+        );
       }
 
       setShowModal(false);
@@ -161,9 +179,11 @@ export default function AdminAnnouncementsPage() {
 
   // 4. Delete Handler
   const handleDelete = async (id: string) => {
+    if (!currentUnion) return;
     if (!confirm("Are you sure you want to delete this announcement?")) return;
     try {
-      await deleteDoc(doc(db, "announcements", id));
+      // DELETE: unions/{uid}/announcements/{aid}
+      await deleteDoc(doc(db, "unions", currentUnion.id, "announcements", id));
     } catch (error) {
       console.error("Error deleting:", error);
       alert("Failed to delete. Check permissions.");
@@ -180,6 +200,11 @@ export default function AdminAnnouncementsPage() {
       {/* Header */}
       <div className='flex justify-between items-center mb-8'>
         <div>
+          <div className='flex items-center gap-2 mb-1'>
+            <span className='text-xs font-bold text-slate-400 uppercase tracking-wider'>
+              {currentUnion?.name}
+            </span>
+          </div>
           <h1 className='text-2xl font-bold text-slate-900 dark:text-white'>
             Announcements
           </h1>
@@ -215,7 +240,6 @@ export default function AdminAnnouncementsPage() {
               key={item.id}
               className='bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex gap-4 group hover:border-slate-300 dark:hover:border-slate-700 transition-colors'
             >
-              {/* Icon based on category */}
               <div
                 className={`p-3 rounded-lg h-fit shrink-0 ${
                   item.category === "URGENT"
@@ -245,7 +269,6 @@ export default function AdminAnnouncementsPage() {
                     </span>
                   </div>
 
-                  {/* ACTION BUTTONS */}
                   <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all'>
                     <button
                       onClick={() => openEditModal(item)}
@@ -311,13 +334,11 @@ export default function AdminAnnouncementsPage() {
                   Category
                 </label>
                 <div className='flex gap-2'>
-                  {["GENERAL", "EVENT", "URGENT"].map((cat) => (
+                  {(["GENERAL", "EVENT", "URGENT"] as const).map((cat) => (
                     <button
                       key={cat}
                       type='button'
-                      onClick={() =>
-                        setCategory(cat as Announcement["category"])
-                      }
+                      onClick={() => setCategory(cat)}
                       className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors ${
                         category === cat
                           ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900"
