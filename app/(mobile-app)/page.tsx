@@ -15,6 +15,7 @@ import {
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import { useUnion } from "../(components)/union-provider";
 import {
   Users,
   Bell,
@@ -26,6 +27,7 @@ import {
   Calendar,
   Info,
   Check,
+  Building2,
 } from "lucide-react";
 
 // --- Types ---
@@ -47,8 +49,7 @@ interface Announcement {
   createdAt: Timestamp;
 }
 
-// --- Components ---
-
+// --- Helper Functions ---
 const formatTimeAgo = (date: Date) => {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -97,6 +98,7 @@ const AnnouncementCard = ({ item }: { item: Announcement }) => {
 
 export default function HomePage() {
   const router = useRouter();
+  const { currentUnion, isLoading: unionLoading } = useUnion();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [displayName, setDisplayName] = useState("");
 
@@ -122,128 +124,137 @@ export default function HomePage() {
           } else {
             setDisplayName("Member");
           }
-          fetchHomeData(currentUser.uid);
         } catch (error) {
           console.error("Error fetching profile", error);
         }
-      } else {
-        setLoading(false);
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Data
-  const fetchHomeData = async (userId: string) => {
-    try {
-      // A. Fetch Announcements
-      const annQuery = query(
-        collection(db, "announcements"),
-        orderBy("createdAt", "desc"),
-        limit(5)
-      );
-      const annSnaps = await getDocs(annQuery);
-      const annList = annSnaps.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Announcement[];
-      setAnnouncements(annList);
-
-      // B. Fetch Groups
-      const groupQuery = query(
-        collection(db, "groups"),
-        where("members", "array-contains", userId)
-      );
-      const groupSnaps = await getDocs(groupQuery);
-      setActiveGroupCount(groupSnaps.size);
-
-      // C. Fetch Recent Messages
-      const activityPromises = groupSnaps.docs.map(async (groupDoc) => {
-        const groupData = groupDoc.data();
-        const groupId = groupDoc.id;
-
-        const msgQuery = query(
-          collection(db, "groups", groupId, "messages"),
-          orderBy("createdAt", "desc"),
-          limit(1)
-        );
-        const msgSnaps = await getDocs(msgQuery);
-
-        if (!msgSnaps.empty) {
-          const msg = msgSnaps.docs[0].data();
-          const timestamp = msg.createdAt?.toDate
-            ? msg.createdAt.toDate()
-            : new Date();
-
-          return {
-            id: msgSnaps.docs[0].id,
-            type: "message",
-            groupId: groupId,
-            groupName: groupData.name,
-            groupColor: groupData.color || "bg-blue-600",
-            content: msg.text,
-            timestamp: timestamp,
-          } as ActivityItem;
-        }
-        return null;
-      });
-
-      const results = await Promise.all(activityPromises);
-      const validActivities = results.filter(
-        (item): item is ActivityItem => item !== null
-      );
-      validActivities.sort(
-        (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
-      );
-
-      setActivities(validActivities);
-    } catch (error) {
-      console.error("Error fetching home data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 3. Calculate Unread Count
+  // 2. Fetch Data (Dependent on Union)
   useEffect(() => {
-    if (loading) return;
+    const fetchHomeData = async () => {
+      // If user is logged in but Union is missing (e.g. redirected to Get Started),
+      // stop loading so we don't block the UI with a spinner.
+      if (user && !currentUnion && !unionLoading) {
+        setLoading(false);
+        return;
+      }
 
-    // Get the last time the user clicked the bell
-    const lastViewedStr = localStorage.getItem("notifications_last_viewed");
-    const lastViewed = lastViewedStr ? new Date(lastViewedStr) : new Date(0); // Default to epoch if first time
+      if (!user || !currentUnion) return;
+
+      try {
+        setLoading(true);
+        const unionId = currentUnion.id;
+
+        // A. Announcements (Scoped to Union)
+        const annQuery = query(
+          collection(db, "unions", unionId, "announcements"),
+          orderBy("createdAt", "desc"),
+          limit(3)
+        );
+        const annSnaps = await getDocs(annQuery);
+        const annList = annSnaps.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Announcement[];
+        setAnnouncements(annList);
+
+        // B. Groups (Scoped to Union)
+        const groupQuery = query(
+          collection(db, "unions", unionId, "groups"),
+          where("members", "array-contains", user.uid)
+        );
+        const groupSnaps = await getDocs(groupQuery);
+        setActiveGroupCount(groupSnaps.size);
+
+        // C. Messages (Scoped to Union)
+        const activityPromises = groupSnaps.docs.map(async (groupDoc) => {
+          const groupData = groupDoc.data();
+          const groupId = groupDoc.id;
+
+          const msgQuery = query(
+            collection(db, "unions", unionId, "groups", groupId, "messages"),
+            orderBy("createdAt", "desc"),
+            limit(1)
+          );
+          const msgSnaps = await getDocs(msgQuery);
+
+          if (!msgSnaps.empty) {
+            const msg = msgSnaps.docs[0].data();
+            const timestamp = msg.createdAt?.toDate
+              ? msg.createdAt.toDate()
+              : new Date();
+
+            return {
+              id: msgSnaps.docs[0].id,
+              type: "message",
+              groupId: groupId,
+              groupName: groupData.name,
+              groupColor: groupData.color || "bg-blue-600",
+              content: msg.text,
+              timestamp: timestamp,
+            } as ActivityItem;
+          }
+          return null;
+        });
+
+        const results = await Promise.all(activityPromises);
+        const validActivities = results.filter(
+          (item): item is ActivityItem => item !== null
+        );
+        validActivities.sort(
+          (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+        );
+
+        setActivities(validActivities);
+      } catch (error) {
+        console.error("Error fetching home data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!unionLoading) {
+      fetchHomeData();
+    }
+  }, [user, currentUnion, unionLoading]);
+
+  // 3. Unread Count Logic
+  useEffect(() => {
+    if (loading || !currentUnion) return;
+    const lastViewedStr = localStorage.getItem(
+      `notifications_viewed_${currentUnion.id}`
+    );
+    const lastViewed = lastViewedStr ? new Date(lastViewedStr) : new Date(0);
 
     let count = 0;
-
-    // Count new announcements
     announcements.forEach((ann) => {
       const annDate = ann.createdAt?.toDate
         ? ann.createdAt.toDate()
         : new Date(0);
       if (annDate > lastViewed) count++;
     });
-
-    // Count new messages/activities
     activities.forEach((act) => {
       if (act.timestamp > lastViewed) count++;
     });
-
     setUnreadCount(count);
-  }, [activities, announcements, loading]);
+  }, [activities, announcements, loading, currentUnion]);
 
-  // 4. Handle "Mark as Read" (Click Bell)
   const handleClearNotifications = () => {
-    if (unreadCount === 0) return;
-
+    if (unreadCount === 0 || !currentUnion) return;
     const now = new Date();
-    localStorage.setItem("notifications_last_viewed", now.toISOString());
+    localStorage.setItem(
+      `notifications_viewed_${currentUnion.id}`,
+      now.toISOString()
+    );
     setUnreadCount(0);
     setJustCleared(true);
-
-    // Remove the "Check" icon animation after 2 seconds
     setTimeout(() => setJustCleared(false), 2000);
   };
 
-  if (loading) {
+  if (loading || unionLoading) {
     return (
       <div className='flex flex-col items-center justify-center h-screen bg-slate-950 text-slate-500'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4'></div>
@@ -252,21 +263,30 @@ export default function HomePage() {
     );
   }
 
+  // If we are done loading but still have no union, render nothing
+  // (The UnionProvider is likely redirecting us to /get-started as we speak)
+  if (!currentUnion) {
+    return null;
+  }
+
   return (
     <div className='min-h-screen bg-slate-950 pb-24 text-slate-200'>
       {/* Header */}
       <div className='p-6 pt-8'>
         <header className='flex justify-between items-center mb-8'>
           <div>
+            {/* Union Name Badge */}
+            <div className='flex items-center gap-2 mb-1 opacity-70'>
+              <Building2 size={12} />
+              <span className='text-xs font-bold tracking-widest uppercase'>
+                {currentUnion.name}
+              </span>
+            </div>
             <h1 className='text-2xl font-bold text-white'>
               {user ? `Hello, ${displayName}` : "Welcome"}
             </h1>
-            <p className='text-slate-400 text-sm'>
-              Here&apos;s what&apos;s happening
-            </p>
           </div>
 
-          {/* UPDATED: Bell Button clears notifications */}
           <button
             onClick={handleClearNotifications}
             className='w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center border border-slate-800 relative hover:bg-slate-800 transition-colors active:scale-95'
@@ -279,8 +299,6 @@ export default function HomePage() {
                 className={unreadCount > 0 ? "text-white" : "text-slate-400"}
               />
             )}
-
-            {/* Red Badge Counter */}
             {unreadCount > 0 && !justCleared && (
               <div className='absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-950 animate-in zoom-in'>
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -319,7 +337,6 @@ export default function HomePage() {
             <div className='flex justify-between items-start mb-2'>
               <Activity size={24} className='opacity-80' />
             </div>
-            {/* Show unread count here too if you like, or just total activity */}
             <div className='text-3xl font-bold'>{activities.length}</div>
             <div className='text-sm opacity-80 font-medium'>Recent Updates</div>
           </div>
@@ -350,14 +367,11 @@ export default function HomePage() {
                   onClick={() => router.push(`/groups/${item.groupId}`)}
                   className='flex gap-4 items-start p-3 hover:bg-slate-800/50 rounded-xl transition-colors cursor-pointer group'
                 >
-                  {/* Group Avatar */}
                   <div
                     className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-white shadow-md ${item.groupColor}`}
                   >
                     {item.groupName.substring(0, 2).toUpperCase()}
                   </div>
-
-                  {/* Content */}
                   <div className='flex-1 min-w-0'>
                     <div className='flex justify-between items-center mb-0.5'>
                       <span className='text-white text-sm font-bold truncate pr-2 group-hover:text-blue-400 transition-colors'>
