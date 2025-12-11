@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
@@ -12,7 +13,6 @@ import { auth, db, storage } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import QRCode from "react-qr-code";
 import {
-  Save,
   Camera,
   LogOut,
   QrCode,
@@ -24,7 +24,6 @@ import {
   Edit2,
   X,
   Copy,
-  CreditCard,
   Lock as LockIcon,
 } from "lucide-react";
 
@@ -37,12 +36,12 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [status, setStatus] = useState("");
   const [memberId, setMemberId] = useState("");
-  const [photoURL, setPhotoURL] = useState(""); // Stores the URL from DB
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false); // New Setting
+  const [photoURL, setPhotoURL] = useState("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   // Edit State
-  const [avatarFile, setAvatarFile] = useState<File | null>(null); // File to upload
-  const [previewUrl, setPreviewUrl] = useState(""); // Local preview before upload
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
 
   // UI State
   const [isEditing, setIsEditing] = useState(false);
@@ -85,11 +84,11 @@ export default function ProfilePage() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setAvatarFile(file);
-      setPreviewUrl(URL.createObjectURL(file)); // Show instant preview
+      setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
-  // 3. Save Handler (Profile Info + Avatar)
+  // 3. Save Handler
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
@@ -98,7 +97,6 @@ export default function ProfilePage() {
     try {
       let finalPhotoURL = photoURL;
 
-      // Upload Image if changed
       if (avatarFile) {
         const storageRef = ref(
           storage,
@@ -120,9 +118,9 @@ export default function ProfilePage() {
         { merge: true }
       );
 
-      setPhotoURL(finalPhotoURL); // Update state with real URL
-      setPreviewUrl(""); // Clear preview
-      setAvatarFile(null); // Clear file
+      setPhotoURL(finalPhotoURL);
+      setPreviewUrl("");
+      setAvatarFile(null);
 
       setSuccessMsg("Saved!");
       setTimeout(() => setSuccessMsg(""), 3000);
@@ -135,7 +133,7 @@ export default function ProfilePage() {
     }
   };
 
-  // 4. Toggle Notifications (Auto-Save)
+  // 4. Toggle Notifications
   const toggleNotifications = async () => {
     if (!user) return;
     const newState = !notificationsEnabled;
@@ -147,7 +145,6 @@ export default function ProfilePage() {
       });
     } catch (error) {
       console.error("Error updating settings:", error);
-      // Revert if failed
       setNotificationsEnabled(!newState);
     }
   };
@@ -225,7 +222,6 @@ export default function ProfilePage() {
         darkMode ? "bg-slate-950 text-slate-200" : "bg-slate-100 text-slate-900"
       }`}
     >
-      {/* Header */}
       <div className='p-6 pt-12 flex justify-between items-center'>
         <h1
           className={`text-2xl font-bold ${
@@ -237,7 +233,6 @@ export default function ProfilePage() {
         <div className='w-8'></div>
       </div>
 
-      {/* Main Card */}
       <div className='px-6 mb-8'>
         <div
           className={`${
@@ -250,13 +245,15 @@ export default function ProfilePage() {
 
           <div className='flex items-center gap-5 relative z-10'>
             <div className='relative'>
-              {/* AVATAR LOGIC */}
+              {/* AVATAR */}
               <div className='w-20 h-20 rounded-full flex items-center justify-center shadow-lg overflow-hidden bg-gradient-to-tr from-blue-600 to-purple-600'>
                 {previewUrl || photoURL ? (
-                  <img
+                  <Image
                     src={previewUrl || photoURL}
                     alt='Profile'
-                    className='w-full h-full object-cover'
+                    fill
+                    className='object-cover'
+                    sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
                   />
                 ) : (
                   <span className='text-2xl font-bold text-white'>
@@ -267,7 +264,6 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Camera Button (Only in Edit Mode) */}
               {isEditing && (
                 <>
                   <button
@@ -417,7 +413,7 @@ export default function ProfilePage() {
                   className={`flex-1 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 border ${
                     darkMode
                       ? "bg-slate-700/50 text-white border-slate-600/50 hover:bg-slate-700"
-                      : "bg-slate-100 text-slate-700 border-slate-200"
+                      : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
                   }`}
                 >
                   <Edit2 size={16} /> Edit Profile
@@ -432,8 +428,6 @@ export default function ProfilePage() {
         <h3 className='text-slate-500 text-xs font-bold uppercase tracking-wider mb-3 ml-2'>
           App Settings
         </h3>
-
-        {/* Night Mode Toggle */}
         <div
           className={`${
             darkMode
@@ -470,8 +464,6 @@ export default function ProfilePage() {
             />
           </button>
         </div>
-
-        {/* Notifications Toggle (Functioning) */}
         <div
           className={`${
             darkMode
@@ -504,8 +496,6 @@ export default function ProfilePage() {
             />
           </button>
         </div>
-
-        {/* Privacy */}
         <div
           className={`${
             darkMode
@@ -538,7 +528,7 @@ export default function ProfilePage() {
           <span className='font-medium'>Sign Out</span>
         </button>
         <p className='text-center text-slate-700 text-xs mt-4'>
-          Version 1.0.4 • Chavos SG
+          Version 1.0.4 • Union Hub
         </p>
       </div>
     </div>

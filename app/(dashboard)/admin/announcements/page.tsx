@@ -334,11 +334,11 @@ export default function AdminAnnouncementsPage() {
                   Category
                 </label>
                 <div className='flex gap-2'>
-                  {["GENERAL", "EVENT", "URGENT"].map((cat) => (
+                  {(["GENERAL", "EVENT", "URGENT"] as const).map((cat) => (
                     <button
                       key={cat}
                       type='button'
-                      onClick={() => setCategory(cat as any)}
+                      onClick={() => setCategory(cat)}
                       className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors ${
                         category === cat
                           ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900"

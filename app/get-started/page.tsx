@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   setDoc,
-  collection,
   serverTimestamp,
   doc,
   updateDoc,
@@ -37,7 +36,7 @@ export default function GetStartedPage() {
 
   // Helper: Generate Random Code
   const generateRandomCode = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 1, 0 to avoid confusion
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let result = "";
     for (let i = 0; i < 6; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -87,9 +86,13 @@ export default function GetStartedPage() {
 
       localStorage.setItem("last_union_id", cleanId);
       window.location.href = "/";
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating union:", error);
-      setError(error.message);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An unexpected error occurred.");
+      }
     } finally {
       setLoading(false);
     }
@@ -119,9 +122,15 @@ export default function GetStartedPage() {
 
       localStorage.setItem("last_union_id", cleanJoinId);
       window.location.href = "/";
-    } catch (error: any) {
-      console.error("Error joining union:", error);
-      if (error.code === "permission-denied") {
+    } catch (err) {
+      console.error("Error joining union:", err);
+
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "code" in err &&
+        (err as { code: unknown }).code === "permission-denied"
+      ) {
         setError("Access Denied. Code allows join?");
       } else {
         setError("Failed to join. Try again.");

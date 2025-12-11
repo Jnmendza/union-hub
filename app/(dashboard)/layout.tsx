@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AdminSidebar } from "../(components)/admin-sidebar";
 import { useUnion } from "../(components)/union-provider";
@@ -10,8 +11,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { currentUnion, isLoading } = useUnion(); // Get current union status
-  const [authorized, setAuthorized] = useState(false);
+  const { currentUnion, isLoading } = useUnion();
+  // Derived state for authorization
+  const isAuthorized = currentUnion?.role === "ADMIN";
 
   useEffect(() => {
     // 1. Wait for Union Provider to finish loading
@@ -19,21 +21,19 @@ export default function DashboardLayout({
 
     // 2. Check if we have a union selected
     if (!currentUnion) {
-      router.push("/"); // No union? Go home (which will send to Get Started)
+      router.push("/");
       return;
     }
 
     // 3. Check Role (Must be ADMIN to see this layout)
-    if (currentUnion.role === "ADMIN") {
-      setAuthorized(true);
-    } else {
+    if (!isAuthorized) {
       console.log("Access Denied: You are not an Admin of this Union.");
-      router.push("/"); // Kick back to mobile app
+      router.push("/");
     }
-  }, [currentUnion, isLoading, router]);
+  }, [currentUnion, isLoading, router, isAuthorized]);
 
   // Show loading while checking permissions
-  if (isLoading || !authorized) {
+  if (isLoading || !isAuthorized) {
     return (
       <div className='min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500'></div>

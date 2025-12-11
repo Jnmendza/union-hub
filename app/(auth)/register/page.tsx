@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -20,22 +20,13 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Validation State
-  const [validations, setValidations] = useState({
-    minLength: false,
-    hasNumber: false,
-    hasUpper: false,
-    match: false,
-  });
-
-  useEffect(() => {
-    setValidations({
-      minLength: password.length >= 8,
-      hasNumber: /\d/.test(password),
-      hasUpper: /[A-Z]/.test(password),
-      match: password.length > 0 && password === confirmPass,
-    });
-  }, [password, confirmPass]);
+  // Validation - Derived State
+  const validations = {
+    minLength: password.length >= 8,
+    hasNumber: /\d/.test(password),
+    hasUpper: /[A-Z]/.test(password),
+    match: password.length > 0 && password === confirmPass,
+  };
 
   const isFormValid =
     Object.values(validations).every(Boolean) && email.length > 0;
@@ -63,10 +54,15 @@ export default function RegisterPage() {
       });
 
       router.push("/");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
+      let errorMessage = "An unknown error occurred";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+
       setError(
-        err.message
+        errorMessage
           .replace("Firebase: ", "")
           .replace("Error (auth/", "")
           .replace(").", "")

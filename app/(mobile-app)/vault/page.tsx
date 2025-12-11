@@ -8,8 +8,7 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import {
   Folder,
   FileText,
@@ -29,12 +28,12 @@ interface Resource {
   url: string;
   type: "LINK" | "TEXT" | "FILE";
   category: "General" | "Chants" | "Bylaws" | "Tifo";
-  visibility?: "PUBLIC" | "ADMIN"; // Optional because old data might lack it
-  createdAt: Timestamp | null;
+  visibility?: "PUBLIC" | "ADMIN";
+  createdAt: Timestamp;
 }
 
 // --- Components ---
-const CategoryBadge = ({ category }: { category: string }) => {
+const CategoryBadge = ({ category }: { category: Resource["category"] }) => {
   const colors: Record<string, string> = {
     General: "bg-slate-700 text-slate-200",
     Chants: "bg-purple-900/50 text-purple-200 border-purple-700/50",
@@ -52,7 +51,7 @@ const CategoryBadge = ({ category }: { category: string }) => {
   );
 };
 
-const ResourceIcon = ({ type }: { type: Resource["type"] }) => {
+const ResourceIcon = ({ type }: { type: string }) => {
   switch (type) {
     case "LINK":
       return <LinkIcon size={18} className='text-blue-400' />;
@@ -66,7 +65,6 @@ const ResourceIcon = ({ type }: { type: Resource["type"] }) => {
 };
 
 export default function VaultPage() {
-  const [_, setUser] = useState<FirebaseUser | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,16 +73,8 @@ export default function VaultPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [viewingResource, setViewingResource] = useState<Resource | null>(null);
 
-  // 1. Auth
+  // 1. Fetch Resources (Read-Only)
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
-  // 2. Fetch Resources (Read-Only)
-  useEffect(() => {
-    // FIX: Removed 'where' clause. We fetch ALL items sorted by date.
-    // This avoids "Missing Index" errors and handles old data gracefully.
     const q = query(collection(db, "resources"), orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(
@@ -95,8 +85,7 @@ export default function VaultPage() {
           ...doc.data(),
         })) as Resource[];
 
-        // FIX: Client-side Filter
-        // Show if visibility is PUBLIC OR if visibility field is missing (old data)
+        // Client-side Filter for Public items
         const publicItems = allItems.filter(
           (item) => item.visibility === "PUBLIC" || !item.visibility
         );
@@ -113,6 +102,7 @@ export default function VaultPage() {
   }, []);
 
   // --- Filtering ---
+  // FIX: Removed unused '_' parameter
   const filteredResources = resources.filter((res) => {
     const matchesSearch =
       res.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
