@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./(components)/theme-provider";
 import AuthProvider from "./(components)/AuthProvider";
+import { UnionProvider } from "./(components)/union-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,7 +36,9 @@ export default function RootLayout({
           - min-h-screen: Ensures the white background goes to the bottom
           - shadow-2xl: Adds depth so it pops off the desktop background
         */}
-          <AuthProvider>{children}</AuthProvider>
+          <UnionProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </UnionProvider>
         </ThemeProvider>
       </body>
     </html>

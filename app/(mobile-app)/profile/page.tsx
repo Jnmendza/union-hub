@@ -1,37 +1,48 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import React, { useState, useEffect, useRef } from "react";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   onAuthStateChanged,
   signOut,
   User as FirebaseUser,
 } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import QRCode from "react-qr-code";
 import {
+  Save,
   Camera,
   LogOut,
   QrCode,
   Moon,
   Sun,
   Bell,
+  Shield,
   ChevronRight,
   Edit2,
   X,
   Copy,
+  CreditCard,
   Lock as LockIcon,
 } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Data State
   const [displayName, setDisplayName] = useState("");
   const [status, setStatus] = useState("");
   const [memberId, setMemberId] = useState("");
+  const [photoURL, setPhotoURL] = useState(""); // Stores the URL from DB
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false); // New Setting
+
+  // Edit State
+  const [avatarFile, setAvatarFile] = useState<File | null>(null); // File to upload
+  const [previewUrl, setPreviewUrl] = useState(""); // Local preview before upload
 
   // UI State
   const [isEditing, setIsEditing] = useState(false);
@@ -46,15 +57,19 @@ export default function ProfilePage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+
       if (currentUser) {
         try {
           const docRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(docRef);
+
           if (docSnap.exists()) {
             const data = docSnap.data();
             setDisplayName(data.displayName || "");
             setStatus(data.status || "");
             setMemberId(data.memberId || "");
+            setPhotoURL(data.photoURL || "");
+            setNotificationsEnabled(data.notificationsEnabled || false);
           }
         } catch (error) {
           console.error("Error fetching profile:", error);
@@ -65,24 +80,49 @@ export default function ProfilePage() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Save Handler (Only saves Name & Status now)
+  // 2. Handle File Selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      setPreviewUrl(URL.createObjectURL(file)); // Show instant preview
+    }
+  };
+
+  // 3. Save Handler (Profile Info + Avatar)
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
     setSuccessMsg("");
 
     try {
+      let finalPhotoURL = photoURL;
+
+      // Upload Image if changed
+      if (avatarFile) {
+        const storageRef = ref(
+          storage,
+          `avatars/${user.uid}/profile_${Date.now()}`
+        );
+        const snapshot = await uploadBytes(storageRef, avatarFile);
+        finalPhotoURL = await getDownloadURL(snapshot.ref);
+      }
+
       await setDoc(
         doc(db, "users", user.uid),
         {
           displayName: displayName || "Anonymous",
           status: status,
-          // We DO NOT save memberId here anymore. It's admin-controlled.
+          photoURL: finalPhotoURL,
           email: user.email,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
       );
+
+      setPhotoURL(finalPhotoURL); // Update state with real URL
+      setPreviewUrl(""); // Clear preview
+      setAvatarFile(null); // Clear file
 
       setSuccessMsg("Saved!");
       setTimeout(() => setSuccessMsg(""), 3000);
@@ -92,6 +132,23 @@ export default function ProfilePage() {
       alert("Failed to save profile.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // 4. Toggle Notifications (Auto-Save)
+  const toggleNotifications = async () => {
+    if (!user) return;
+    const newState = !notificationsEnabled;
+    setNotificationsEnabled(newState);
+
+    try {
+      await updateDoc(doc(db, "users", user.uid), {
+        notificationsEnabled: newState,
+      });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      // Revert if failed
+      setNotificationsEnabled(!newState);
     }
   };
 
@@ -112,20 +169,22 @@ export default function ProfilePage() {
     textArea.select();
     try {
       document.execCommand("copy");
-      setSuccessMsg("Copied!");
+      setSuccessMsg("ID Copied!");
       setTimeout(() => setSuccessMsg(""), 2000);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to copy", err);
     }
     document.body.removeChild(textArea);
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <div className='h-screen bg-slate-950 flex items-center justify-center'>
-        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500'></div>
+      <div className='flex flex-col items-center justify-center h-screen bg-slate-950 text-slate-500'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4'></div>
+        <p>Loading profile...</p>
       </div>
     );
+  }
 
   // --- QR CODE MODAL ---
   if (showQr) {
@@ -166,6 +225,7 @@ export default function ProfilePage() {
         darkMode ? "bg-slate-950 text-slate-200" : "bg-slate-100 text-slate-900"
       }`}
     >
+      {/* Header */}
       <div className='p-6 pt-12 flex justify-between items-center'>
         <h1
           className={`text-2xl font-bold ${
@@ -177,6 +237,7 @@ export default function ProfilePage() {
         <div className='w-8'></div>
       </div>
 
+      {/* Main Card */}
       <div className='px-6 mb-8'>
         <div
           className={`${
@@ -189,13 +250,40 @@ export default function ProfilePage() {
 
           <div className='flex items-center gap-5 relative z-10'>
             <div className='relative'>
-              <div className='w-20 h-20 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-lg'>
-                {displayName ? displayName.substring(0, 2).toUpperCase() : "ID"}
+              {/* AVATAR LOGIC */}
+              <div className='w-20 h-20 rounded-full flex items-center justify-center shadow-lg overflow-hidden bg-gradient-to-tr from-blue-600 to-purple-600'>
+                {previewUrl || photoURL ? (
+                  <img
+                    src={previewUrl || photoURL}
+                    alt='Profile'
+                    className='w-full h-full object-cover'
+                  />
+                ) : (
+                  <span className='text-2xl font-bold text-white'>
+                    {displayName
+                      ? displayName.substring(0, 2).toUpperCase()
+                      : "ID"}
+                  </span>
+                )}
               </div>
+
+              {/* Camera Button (Only in Edit Mode) */}
               {isEditing && (
-                <button className='absolute -bottom-1 -right-1 bg-slate-700 p-1.5 rounded-full border border-slate-600 text-white'>
-                  <Camera size={12} />
-                </button>
+                <>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className='absolute -bottom-1 -right-1 bg-slate-700 p-1.5 rounded-full border border-slate-600 text-white hover:bg-slate-600 transition-colors'
+                  >
+                    <Camera size={12} />
+                  </button>
+                  <input
+                    type='file'
+                    ref={fileInputRef}
+                    className='hidden'
+                    accept='image/*'
+                    onChange={handleFileSelect}
+                  />
+                </>
               )}
             </div>
 
@@ -225,7 +313,6 @@ export default function ProfilePage() {
                           : "bg-slate-50 border-slate-300 text-slate-900"
                       }`}
                     />
-                    {/* LOCKED MEMBER ID */}
                     <div className='relative w-1/3 group'>
                       <LockIcon
                         size={12}
@@ -241,10 +328,6 @@ export default function ProfilePage() {
                             : "bg-slate-50 border-slate-300 text-slate-900"
                         }`}
                       />
-                      {/* Tooltip for Disabled Input */}
-                      <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap'>
-                        Contact Admin to Change
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -272,6 +355,7 @@ export default function ProfilePage() {
                         ? "bg-slate-950/50 border-slate-700/50 hover:bg-slate-900"
                         : "bg-slate-100 border-slate-200 hover:bg-slate-200"
                     }`}
+                    title='Click to copy full ID'
                   >
                     <span className='text-[10px] text-slate-500 font-mono'>
                       {memberId
@@ -280,8 +364,9 @@ export default function ProfilePage() {
                     </span>
                     <Copy size={10} className='text-slate-500' />
                   </button>
-                  {successMsg === "Copied!" && (
-                    <span className='ml-2 text-xs text-green-500 font-medium'>
+
+                  {successMsg === "ID Copied!" && (
+                    <span className='ml-2 text-xs text-green-500 font-medium animate-in fade-in slide-in-from-left-2'>
                       Copied!
                     </span>
                   )}
@@ -294,7 +379,11 @@ export default function ProfilePage() {
             {isEditing ? (
               <div className='flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200'>
                 <button
-                  onClick={() => setIsEditing(false)}
+                  onClick={() => {
+                    setIsEditing(false);
+                    setPreviewUrl("");
+                    setAvatarFile(null);
+                  }}
                   className={`flex-1 border py-2.5 rounded-xl font-medium text-sm ${
                     darkMode
                       ? "border-slate-600/30 text-slate-500 hover:text-slate-300"
@@ -339,17 +428,18 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Settings Section (Same as before) */}
       <div className='px-6 space-y-1'>
         <h3 className='text-slate-500 text-xs font-bold uppercase tracking-wider mb-3 ml-2'>
           App Settings
         </h3>
+
+        {/* Night Mode Toggle */}
         <div
           className={`${
             darkMode
               ? "bg-slate-900 border-slate-800"
               : "bg-white border-slate-200"
-          } border rounded-xl p-4 flex items-center justify-between`}
+          } border rounded-xl p-4 flex items-center justify-between transition-colors`}
         >
           <div className='flex items-center gap-3'>
             <div className='p-2 bg-purple-500/10 rounded-lg text-purple-400'>
@@ -369,23 +459,25 @@ export default function ProfilePage() {
           </div>
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className={`w-12 h-6 rounded-full relative ${
+            className={`w-12 h-6 rounded-full transition-colors relative ${
               darkMode ? "bg-blue-600" : "bg-slate-300"
             }`}
           >
             <div
               className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${
                 darkMode ? "translate-x-6" : "translate-x-0"
-              }`}
+              } shadow-sm`}
             />
           </button>
         </div>
+
+        {/* Notifications Toggle (Functioning) */}
         <div
           className={`${
             darkMode
               ? "bg-slate-900 border-slate-800"
               : "bg-white border-slate-200"
-          } border rounded-xl p-4 flex items-center justify-between`}
+          } border rounded-xl p-4 flex items-center justify-between transition-colors`}
         >
           <div className='flex items-center gap-3'>
             <div className='p-2 bg-orange-500/10 rounded-lg text-orange-400'>
@@ -397,6 +489,40 @@ export default function ProfilePage() {
               }`}
             >
               Notifications
+            </span>
+          </div>
+          <button
+            onClick={toggleNotifications}
+            className={`w-12 h-6 rounded-full transition-colors relative ${
+              notificationsEnabled ? "bg-green-500" : "bg-slate-700"
+            }`}
+          >
+            <div
+              className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${
+                notificationsEnabled ? "translate-x-6" : "translate-x-0"
+              } shadow-sm`}
+            />
+          </button>
+        </div>
+
+        {/* Privacy */}
+        <div
+          className={`${
+            darkMode
+              ? "bg-slate-900 border-slate-800"
+              : "bg-white border-slate-200"
+          } border rounded-xl p-4 flex items-center justify-between transition-colors`}
+        >
+          <div className='flex items-center gap-3'>
+            <div className='p-2 bg-emerald-500/10 rounded-lg text-emerald-400'>
+              <Shield size={20} />
+            </div>
+            <span
+              className={`font-medium ${
+                darkMode ? "text-slate-200" : "text-slate-900"
+              }`}
+            >
+              Privacy & Security
             </span>
           </div>
           <ChevronRight size={20} className='text-slate-600' />

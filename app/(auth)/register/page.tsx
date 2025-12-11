@@ -5,18 +5,16 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { User, Mail, Lock, Eye, EyeOff, Check } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, Check, Loader2 } from "lucide-react"; // Added Loader2
 import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
 
-  // Form State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
 
-  // UI State
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
@@ -30,7 +28,6 @@ export default function RegisterPage() {
     match: false,
   });
 
-  // Run validation on every keystroke
   useEffect(() => {
     setValidations({
       minLength: password.length >= 8,
@@ -51,7 +48,6 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      // 1. Create Auth User in Firebase
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -59,7 +55,6 @@ export default function RegisterPage() {
       );
       const user = userCredential.user;
 
-      // 2. Create User Profile Document in Firestore
       await setDoc(doc(db, "users", user.uid), {
         email: user.email,
         displayName: "New Member",
@@ -68,21 +63,17 @@ export default function RegisterPage() {
       });
 
       router.push("/");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      if (err instanceof Error) {
-        setError(
-          err.message
-            .replace("Firebase: ", "")
-            .replace("Error (auth/", "")
-            .replace(").", "")
-        );
-      } else {
-        setError("An unexpected error occurred");
-      }
-    } finally {
-      setLoading(false);
+      setError(
+        err.message
+          .replace("Firebase: ", "")
+          .replace("Error (auth/", "")
+          .replace(").", "")
+      );
+      setLoading(false); // Stop loading on error
     }
+    // Note: We don't stop loading on success because we are redirecting
   };
 
   return (
@@ -97,7 +88,6 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSignup} className='space-y-4'>
-          {/* Email Input */}
           <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all'>
             <Mail className='text-slate-500 w-5 h-5 shrink-0' />
             <input
@@ -110,7 +100,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Password Input */}
           <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all'>
             <Lock className='text-slate-500 w-5 h-5 shrink-0' />
             <input
@@ -130,7 +119,6 @@ export default function RegisterPage() {
             </button>
           </div>
 
-          {/* Confirm Password Input */}
           <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all'>
             <Lock className='text-slate-500 w-5 h-5 shrink-0' />
             <input
@@ -150,12 +138,10 @@ export default function RegisterPage() {
             </button>
           </div>
 
-          {/* Validation Checklist */}
           <div className='bg-slate-900/50 p-4 rounded-xl space-y-2'>
             <p className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2'>
               Password Requirements
             </p>
-
             <ValidationItem
               valid={validations.minLength}
               label='At least 8 characters'
@@ -180,8 +166,9 @@ export default function RegisterPage() {
           <button
             type='submit'
             disabled={loading || !isFormValid}
-            className='w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-900/20 mt-2'
+            className='w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-900/20 mt-2 flex items-center justify-center gap-2'
           >
+            {loading ? <Loader2 size={20} className='animate-spin' /> : null}
             {loading ? "Creating account..." : "Sign Up"}
           </button>
         </form>
@@ -200,7 +187,6 @@ export default function RegisterPage() {
   );
 }
 
-// Helper Component for Checklist
 const ValidationItem = ({
   valid,
   label,
