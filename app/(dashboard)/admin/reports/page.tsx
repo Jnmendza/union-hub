@@ -12,7 +12,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Flag, Check, Trash2, Ban, AlertTriangle } from "lucide-react";
+import { Check, Trash2, Ban, AlertTriangle } from "lucide-react";
 
 interface Report {
   id: string;
@@ -124,7 +124,7 @@ export default function AdminReportsPage() {
                       className='text-sm text-slate-600 dark:text-slate-300 max-w-xs truncate'
                       title={report.text}
                     >
-                      "{report.text}"
+                      &quot;{report.text}&quot;
                     </p>
                   </td>
                   <td className='p-4'>

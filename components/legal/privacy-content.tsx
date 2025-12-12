@@ -10,11 +10,11 @@ export function PrivacyContent() {
         <section>
           <h2 className='text-lg font-bold text-white mb-1'>1. Introduction</h2>
           <p>
-            Welcome to Union Hub ("we," "our," or "us"). We respect your privacy
-            and are committed to protecting your personal data. This Privacy
-            Policy explains how we collect, use, and share information when you
-            use our mobile application and website (collectively, the
-            "Service").
+            Welcome to Union Hub (&quot;we,&quot; &quot;our,&quot; or
+            &quot;us&quot;). We respect your privacy and are committed to
+            protecting your personal data. This Privacy Policy explains how we
+            collect, use, and share information when you use our mobile
+            application and website (collectively, the &quot;Service&quot;).
           </p>
         </section>
 

@@ -240,7 +240,7 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
             const displayName = profile?.displayName || "User";
 
             return (
-              <div className='relative group'>
+              <div className='relative group' key={msg.id}>
                 <div
                   className={cn(
                     "flex w-max max-w-[75%] flex-col rounded-2xl px-4 py-2 text-sm shadow-sm animate-in fade-in slide-in-from-bottom-2",
@@ -357,7 +357,7 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
               </button>
             </div>
             <p className='text-slate-400 text-sm mb-4 bg-slate-800 p-3 rounded-lg italic'>
-              "{reportingMsg.text}"
+              &quot;{reportingMsg.text}&quot;
             </p>
 
             <form onSubmit={handleReport} className='space-y-4'>

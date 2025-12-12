@@ -195,17 +195,18 @@ export default function ProfilePage() {
 
       // 3. Redirect
       router.push("/login");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error deleting account:", error);
       setIsDeleting(false);
       setShowDeleteConfirm(false);
 
-      if (error.code === "auth/requires-recent-login") {
+      const err = error as { code?: string; message: string };
+      if (err.code === "auth/requires-recent-login") {
         alert(
           "For security, you must have recently signed in to delete your account. Please Log Out and Log In again, then try deleting your account."
         );
       } else {
-        alert("Failed to delete account: " + error.message);
+        alert("Failed to delete account: " + err.message);
       }
     }
   };
