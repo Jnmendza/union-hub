@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "./(components)/theme-provider";
 import AuthProvider from "./(components)/AuthProvider";
 import { UnionProvider } from "./(components)/union-provider";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -40,6 +41,9 @@ export default function RootLayout({
             <AuthProvider>{children}</AuthProvider>
           </UnionProvider>
         </ThemeProvider>
+        <GoogleAnalytics
+          gaId={process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || ""}
+        />
       </body>
     </html>
   );

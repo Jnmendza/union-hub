@@ -17,6 +17,11 @@ export default function RegisterPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // New State for Compliance
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [eulaAgreed, setEulaAgreed] = useState(false);
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +31,25 @@ export default function RegisterPage() {
     hasNumber: /\d/.test(password),
     hasUpper: /[A-Z]/.test(password),
     match: password.length > 0 && password === confirmPass,
+    age: false, // will update dynamically
+    eula: eulaAgreed,
   };
+
+  // Age Calculation
+  const calculateAge = (dobString: string) => {
+    if (!dobString) return 0;
+    const today = new Date();
+    const birthDate = new Date(dobString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const age = calculateAge(dateOfBirth);
+  validations.age = age >= 18;
 
   const isFormValid =
     Object.values(validations).every(Boolean) && email.length > 0;
@@ -51,6 +74,10 @@ export default function RegisterPage() {
         displayName: "New Member",
         status: "Just joined",
         createdAt: new Date().toISOString(),
+        dateOfBirth: dateOfBirth,
+        eulaAgreed: true,
+        isBanned: false,
+        blockedUserIds: [],
       });
 
       router.push("/");
@@ -132,6 +159,40 @@ export default function RegisterPage() {
             >
               {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
+          </div>
+
+          <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex flex-col gap-1 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all'>
+            <label className='text-xs text-slate-500 ml-1'>
+              Date of Birth (Must be 18+)
+            </label>
+            <input
+              type='date'
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              className='bg-transparent text-white w-full focus:outline-none placeholder-slate-600 text-sm [color-scheme:dark]'
+              required
+            />
+          </div>
+
+          <div className='flex items-start gap-3 px-1'>
+            <input
+              type='checkbox'
+              id='eula'
+              checked={eulaAgreed}
+              onChange={(e) => setEulaAgreed(e.target.checked)}
+              className='mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900 text-purple-600 focus:ring-purple-500'
+            />
+            <label htmlFor='eula' className='text-sm text-slate-400'>
+              I agree to the{" "}
+              <Link href='/eula' className='text-purple-400 hover:underline'>
+                End User License Agreement (EULA)
+              </Link>{" "}
+              and the{" "}
+              <Link href='/privacy' className='text-purple-400 hover:underline'>
+                Privacy Policy
+              </Link>
+              . I confirm that I am at least 18 years old.
+            </label>
           </div>
 
           <div className='bg-slate-900/50 p-4 rounded-xl space-y-2'>

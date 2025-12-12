@@ -11,7 +11,16 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Search, Edit2, X, Shield, User, Trash2, Save } from "lucide-react";
+import {
+  Search,
+  Edit2,
+  X,
+  Shield,
+  User,
+  Trash2,
+  Save,
+  Ban,
+} from "lucide-react";
 
 interface UserData {
   id: string;
@@ -20,6 +29,7 @@ interface UserData {
   memberId?: string;
   role?: string; // 'MEMBER' | 'ADMIN' | 'BOARD'
   status?: string;
+  isBanned?: boolean;
 }
 
 export default function AdminUsersPage() {
@@ -93,6 +103,22 @@ export default function AdminUsersPage() {
     } catch (error) {
       console.error("Error deleting user:", error);
       alert("Failed to delete user.");
+    }
+  };
+
+  // 4. Ban User
+  const handleBan = async (user: UserData) => {
+    const newStatus = !user.isBanned;
+    const action = newStatus ? "BAN" : "UN-BAN";
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+
+    try {
+      await updateDoc(doc(db, "users", user.id), {
+        isBanned: newStatus,
+      });
+    } catch (error) {
+      console.error("Error banning user:", error);
+      alert("Failed to update ban status.");
     }
   };
 
@@ -197,6 +223,17 @@ export default function AdminUsersPage() {
                   </td>
                   <td className='p-4 text-right'>
                     <div className='flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+                      <button
+                        onClick={() => handleBan(u)}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          u.isBanned
+                            ? "text-red-600 bg-red-100 dark:bg-red-900/30"
+                            : "text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        }`}
+                        title={u.isBanned ? "Unban User" : "Ban User"}
+                      >
+                        <Ban size={16} />
+                      </button>
                       <button
                         onClick={() => openEditModal(u)}
                         className='p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors'
