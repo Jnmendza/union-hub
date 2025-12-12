@@ -15,7 +15,7 @@ import {
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { useUnion } from "../(components)/union-provider";
+
 import {
   Users,
   Bell,
@@ -29,6 +29,7 @@ import {
   Check,
   Building2,
 } from "lucide-react";
+import { useUnion } from "../(components)/union-provider";
 
 // --- Types ---
 interface ActivityItem {
@@ -61,15 +62,22 @@ const formatTimeAgo = (date: Date) => {
 
 const AnnouncementCard = ({ item }: { item: Announcement }) => {
   const styles = {
-    URGENT: "bg-red-500/10 border-red-500/20 text-red-200",
-    EVENT: "bg-purple-500/10 border-purple-500/20 text-purple-200",
-    GENERAL: "bg-blue-500/10 border-blue-500/20 text-blue-200",
+    URGENT:
+      "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-200",
+    EVENT:
+      "bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20 text-purple-700 dark:text-purple-200",
+    GENERAL:
+      "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-200",
   };
 
   const icon = {
-    URGENT: <AlertCircle size={18} className='text-red-400' />,
-    EVENT: <Calendar size={18} className='text-purple-400' />,
-    GENERAL: <Info size={18} className='text-blue-400' />,
+    URGENT: (
+      <AlertCircle size={18} className='text-red-500 dark:text-red-400' />
+    ),
+    EVENT: (
+      <Calendar size={18} className='text-purple-500 dark:text-purple-400' />
+    ),
+    GENERAL: <Info size={18} className='text-blue-500 dark:text-blue-400' />,
   };
 
   return (
@@ -81,7 +89,7 @@ const AnnouncementCard = ({ item }: { item: Announcement }) => {
       <div className='flex items-start gap-3'>
         <div className='mt-0.5'>{icon[item.category] || icon["GENERAL"]}</div>
         <div className='flex-1 min-w-0'>
-          <h4 className='font-bold text-sm mb-1 text-white'>{item.title}</h4>
+          <h4 className='font-bold text-sm mb-1 text-current'>{item.title}</h4>
           <p className='text-xs opacity-90 leading-relaxed whitespace-pre-wrap'>
             {item.content}
           </p>
@@ -256,7 +264,7 @@ export default function HomePage() {
 
   if (loading || unionLoading) {
     return (
-      <div className='flex flex-col items-center justify-center h-screen bg-slate-950 text-slate-500'>
+      <div className='flex flex-col items-center justify-center h-screen bg-slate-50 dark:bg-slate-950 text-slate-500'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4'></div>
         <p>Loading dashboard...</p>
       </div>
@@ -270,7 +278,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className='min-h-screen bg-slate-950 pb-24 text-slate-200'>
+    <div className='min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 text-slate-900 dark:text-slate-200 transition-colors duration-300'>
       {/* Header */}
       <div className='p-6 pt-8'>
         <header className='flex justify-between items-center mb-8'>
@@ -282,25 +290,29 @@ export default function HomePage() {
                 {currentUnion.name}
               </span>
             </div>
-            <h1 className='text-2xl font-bold text-white'>
+            <h1 className='text-2xl font-bold text-slate-900 dark:text-white'>
               {user ? `Hello, ${displayName}` : "Welcome"}
             </h1>
           </div>
 
           <button
             onClick={handleClearNotifications}
-            className='w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center border border-slate-800 relative hover:bg-slate-800 transition-colors active:scale-95'
+            className='w-10 h-10 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-800 relative hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm active:scale-95'
           >
             {justCleared ? (
               <Check size={20} className='text-green-500 animate-in zoom-in' />
             ) : (
               <Bell
                 size={20}
-                className={unreadCount > 0 ? "text-white" : "text-slate-400"}
+                className={
+                  unreadCount > 0
+                    ? "text-slate-900 dark:text-white"
+                    : "text-slate-400"
+                }
               />
             )}
             {unreadCount > 0 && !justCleared && (
-              <div className='absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-950 animate-in zoom-in'>
+              <div className='absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-950 animate-in zoom-in'>
                 {unreadCount > 9 ? "9+" : unreadCount}
               </div>
             )}
@@ -343,8 +355,8 @@ export default function HomePage() {
         </div>
 
         {/* Recent Activity Feed */}
-        <div className='bg-slate-900/50 rounded-3xl p-6 border border-slate-800 backdrop-blur-sm'>
-          <h3 className='text-white font-bold mb-4 flex items-center gap-2'>
+        <div className='bg-white dark:bg-slate-900/50 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm'>
+          <h3 className='text-slate-900 dark:text-white font-bold mb-4 flex items-center gap-2'>
             <MessageSquare size={16} className='text-blue-500' />
             Recent Activity
           </h3>
@@ -355,7 +367,7 @@ export default function HomePage() {
                 <p>No recent activity.</p>
                 <button
                   onClick={() => router.push("/groups")}
-                  className='text-blue-500 text-sm mt-2 hover:underline'
+                  className='text-blue-600 dark:text-blue-500 text-sm mt-2 hover:underline'
                 >
                   Join a group to get started
                 </button>
@@ -365,24 +377,27 @@ export default function HomePage() {
                 <div
                   key={item.id}
                   onClick={() => router.push(`/groups/${item.groupId}`)}
-                  className='flex gap-4 items-start p-3 hover:bg-slate-800/50 rounded-xl transition-colors cursor-pointer group'
+                  className='flex gap-4 items-start p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors cursor-pointer group'
                 >
+                  {/* Group Avatar */}
                   <div
                     className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-white shadow-md ${item.groupColor}`}
                   >
                     {item.groupName.substring(0, 2).toUpperCase()}
                   </div>
+
+                  {/* Content */}
                   <div className='flex-1 min-w-0'>
                     <div className='flex justify-between items-center mb-0.5'>
-                      <span className='text-white text-sm font-bold truncate pr-2 group-hover:text-blue-400 transition-colors'>
+                      <span className='text-slate-900 dark:text-white text-sm font-bold truncate pr-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors'>
                         {item.groupName}
                       </span>
-                      <span className='text-slate-500 text-[10px] whitespace-nowrap'>
+                      <span className='text-slate-400 dark:text-slate-500 text-[10px] whitespace-nowrap'>
                         {formatTimeAgo(item.timestamp)}
                       </span>
                     </div>
-                    <p className='text-slate-400 text-xs truncate leading-relaxed'>
-                      <span className='text-slate-500 font-medium'>
+                    <p className='text-slate-500 dark:text-slate-400 text-xs truncate leading-relaxed'>
+                      <span className='text-slate-700 dark:text-slate-500 font-medium'>
                         Message:{" "}
                       </span>
                       {item.content}
