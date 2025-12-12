@@ -59,7 +59,23 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
-  // 1. Auth & Fetch Data
+  // 1. Initialize Theme from LocalStorage
+  useEffect(() => {
+    // Check local storage for theme preference
+    const savedTheme = localStorage.getItem("theme");
+    const isDark = savedTheme === "dark" || savedTheme === null; // Default to dark
+
+    setDarkMode(isDark);
+
+    // Apply globally
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  // 2. Auth & Fetch Data
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -86,7 +102,19 @@ export default function ProfilePage() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Handle File Selection
+  // Handle Theme Toggle
+  const toggleTheme = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    localStorage.setItem("theme", newMode ? "dark" : "light");
+
+    if (newMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -95,7 +123,6 @@ export default function ProfilePage() {
     }
   };
 
-  // 3. Save Handler
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
@@ -140,7 +167,6 @@ export default function ProfilePage() {
     }
   };
 
-  // 4. Toggle Notifications
   const toggleNotifications = async () => {
     if (!user) return;
     const newState = !notificationsEnabled;
@@ -181,32 +207,32 @@ export default function ProfilePage() {
     document.body.removeChild(textArea);
   };
 
-  // Handle Delete Account
   const handleDeleteAccount = async () => {
     if (!user) return;
     setIsDeleting(true);
 
     try {
-      // 1. Delete Firestore Data
       await deleteDoc(doc(db, "users", user.uid));
-
-      // 2. Delete Auth User
       await deleteUser(user);
-
-      // 3. Redirect
       router.push("/login");
-    } catch (error: unknown) {
+    } catch (error) {
       console.error("Error deleting account:", error);
       setIsDeleting(false);
       setShowDeleteConfirm(false);
 
-      const err = error as { code?: string; message: string };
-      if (err.code === "auth/requires-recent-login") {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as { code: string }).code === "auth/requires-recent-login"
+      ) {
         alert(
           "For security, you must have recently signed in to delete your account. Please Log Out and Log In again, then try deleting your account."
         );
       } else {
-        alert("Failed to delete account: " + err.message);
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error occurred";
+        alert("Failed to delete account: " + errorMessage);
       }
     }
   };
@@ -527,11 +553,11 @@ export default function ProfilePage() {
                 darkMode ? "text-slate-200" : "text-slate-900"
               }`}
             >
-              Night Mode
+              {darkMode ? "Night Mode" : "Light Mode"}
             </span>
           </div>
           <button
-            onClick={() => setDarkMode(!darkMode)}
+            onClick={toggleTheme}
             className={`w-12 h-6 rounded-full transition-colors relative ${
               darkMode ? "bg-blue-600" : "bg-slate-300"
             }`}
