@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   onAuthStateChanged,
   signOut,
+  deleteUser,
   User as FirebaseUser,
 } from "firebase/auth";
 import { auth, db, storage } from "@/lib/firebase";
@@ -25,6 +26,8 @@ import {
   X,
   Copy,
   Lock as LockIcon,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -47,6 +50,10 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+
+  // Delete Account State
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -174,11 +181,82 @@ export default function ProfilePage() {
     document.body.removeChild(textArea);
   };
 
+  // Handle Delete Account
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setIsDeleting(true);
+
+    try {
+      // 1. Delete Firestore Data
+      await deleteDoc(doc(db, "users", user.uid));
+
+      // 2. Delete Auth User
+      await deleteUser(user);
+
+      // 3. Redirect
+      router.push("/login");
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+
+      if (error.code === "auth/requires-recent-login") {
+        alert(
+          "For security, you must have recently signed in to delete your account. Please Log Out and Log In again, then try deleting your account."
+        );
+      } else {
+        alert("Failed to delete account: " + error.message);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className='flex flex-col items-center justify-center h-screen bg-slate-950 text-slate-500'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4'></div>
         <p>Loading profile...</p>
+      </div>
+    );
+  }
+
+  // --- DELETE CONFIRMATION MODAL ---
+  if (showDeleteConfirm) {
+    return (
+      <div className='fixed inset-0 bg-slate-950/90 z-[60] flex items-center justify-center p-6 backdrop-blur-sm animate-in fade-in'>
+        <div className='bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-red-500/20'>
+          <div className='w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4'>
+            <AlertTriangle
+              className='text-red-600 dark:text-red-500'
+              size={32}
+            />
+          </div>
+
+          <h2 className='text-xl font-bold text-center text-slate-900 dark:text-white mb-2'>
+            Delete Account?
+          </h2>
+          <p className='text-center text-slate-500 dark:text-slate-400 text-sm mb-6'>
+            This action cannot be undone. All your data, messages, and profile
+            information will be permanently removed.
+          </p>
+
+          <div className='space-y-3'>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              className='w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2'
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
+            </button>
+
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={isDeleting}
+              className='w-full bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold py-3.5 rounded-xl transition-all'
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -519,15 +597,24 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className='px-6 mt-8'>
+      <div className='px-6 mt-8 pb-10'>
         <button
           onClick={handleSignOut}
-          className='w-full p-4 flex items-center justify-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-400/5 rounded-xl transition-colors'
+          className='w-full p-4 flex items-center justify-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors mb-2'
         >
           <LogOut size={20} />
           <span className='font-medium'>Sign Out</span>
         </button>
-        <p className='text-center text-slate-700 text-xs mt-4'>
+
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className='w-full p-4 flex items-center justify-center gap-2 text-red-400/80 hover:text-red-500 hover:bg-red-500/5 rounded-xl transition-colors text-sm'
+        >
+          <Trash2 size={16} />
+          <span className='font-medium'>Delete Account</span>
+        </button>
+
+        <p className='text-center text-slate-500/50 text-[10px] mt-4 uppercase tracking-widest'>
           Version 1.0.4 • Union Hub
         </p>
       </div>

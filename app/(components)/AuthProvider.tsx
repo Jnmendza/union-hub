@@ -17,7 +17,13 @@ export default function AuthProvider({
   useEffect(() => {
     // Standard Firebase Listener
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      const publicRoutes = ["/login", "/register", "/forgot-password"];
+      const publicRoutes = [
+        "/login",
+        "/register",
+        "/forgot-password",
+        "/eula",
+        "/privacy",
+      ];
       const isPublicRoute = publicRoutes.includes(pathname);
 
       if (user) {

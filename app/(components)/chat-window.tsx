@@ -11,11 +11,13 @@ import {
   doc,
   getDoc,
   Timestamp,
+  updateDoc,
+  arrayUnion,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, MoreHorizontal, Ban, Flag, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Types
@@ -42,8 +44,26 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
   >({});
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
+
+  // UI State for menus
+  const [activeMenuMsgId, setActiveMenuMsgId] = useState<string | null>(null);
+  const [reportingMsg, setReportingMsg] = useState<Message | null>(null);
+  const [reportReason, setReportReason] = useState("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 0. Listen to Current User's Blocked List
+  useEffect(() => {
+    if (!currentUserId) return;
+    const unsub = onSnapshot(doc(db, "users", currentUserId), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setBlockedUsers(data.blockedUserIds || []);
+      }
+    });
+    return () => unsub();
+  }, [currentUserId]);
 
   // 1. Realtime Subscription (Messages)
   useEffect(() => {
@@ -158,6 +178,47 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
     }
   };
 
+  // 4. Block User
+  const handleBlock = async (userIdToBlock: string) => {
+    if (!confirm("Block this user? You won't see their messages anymore."))
+      return;
+    try {
+      await updateDoc(doc(db, "users", currentUserId), {
+        blockedUserIds: arrayUnion(userIdToBlock),
+      });
+      setActiveMenuMsgId(null);
+    } catch (error) {
+      console.error("Error blocking user:", error);
+      alert("Failed to block user.");
+    }
+  };
+
+  // 5. Report Message
+  const handleReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportingMsg) return;
+
+    try {
+      // Create report
+      await addDoc(collection(db, "reports"), {
+        reportedBy: currentUserId,
+        reportedUser: reportingMsg.senderId,
+        messageId: reportingMsg.id,
+        reason: reportReason,
+        text: reportingMsg.text,
+        groupId,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      });
+      alert("Report submitted. Thank you for keeping the community safe.");
+      setReportingMsg(null);
+      setReportReason("");
+    } catch (error) {
+      console.error("Error reporting:", error);
+      alert("Failed to submit report.");
+    }
+  };
+
   return (
     <div className='flex h-full flex-col bg-slate-950'>
       {/* Messages Area */}
@@ -171,45 +232,87 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
           </div>
         )}
 
-        {messages.map((msg) => {
-          const isMe = msg.senderId === currentUserId;
-          const profile = senderProfiles[msg.senderId];
-          const displayName = profile?.displayName || "User";
+        {messages
+          .filter((m) => !blockedUsers.includes(m.senderId)) // Filter blocked messages
+          .map((msg) => {
+            const isMe = msg.senderId === currentUserId;
+            const profile = senderProfiles[msg.senderId];
+            const displayName = profile?.displayName || "User";
 
-          return (
-            <div
-              key={msg.id}
-              className={cn(
-                "flex w-max max-w-[75%] flex-col rounded-2xl px-4 py-2 text-sm shadow-sm animate-in fade-in slide-in-from-bottom-2",
-                isMe
-                  ? "self-end bg-blue-600 text-white rounded-br-none"
-                  : "self-start bg-slate-800 text-slate-200 rounded-bl-none",
-                // Opacity for pending messages
-                msg.createdAt === null && "opacity-70"
-              )}
-            >
-              {!isMe && (
-                <span className='mb-1 text-[10px] font-bold text-slate-400'>
-                  {displayName}
-                </span>
-              )}
-              <span>{msg.text}</span>
-              <span
-                className={cn(
-                  "mt-1 self-end text-[10px]",
-                  isMe ? "text-blue-200" : "text-slate-500"
+            return (
+              <div className='relative group'>
+                <div
+                  className={cn(
+                    "flex w-max max-w-[75%] flex-col rounded-2xl px-4 py-2 text-sm shadow-sm animate-in fade-in slide-in-from-bottom-2",
+                    isMe
+                      ? "self-end bg-blue-600 text-white rounded-br-none ml-auto"
+                      : "self-start bg-slate-800 text-slate-200 rounded-bl-none",
+                    // Opacity for pending messages
+                    msg.createdAt === null && "opacity-70"
+                  )}
+                >
+                  {!isMe && (
+                    <div className='flex justify-between items-center gap-2 mb-1'>
+                      <span className='text-[10px] font-bold text-slate-400'>
+                        {displayName}
+                      </span>
+                    </div>
+                  )}
+                  <span>{msg.text}</span>
+                  <span
+                    className={cn(
+                      "mt-1 self-end text-[10px]",
+                      isMe ? "text-blue-200" : "text-slate-500"
+                    )}
+                  >
+                    {msg.createdAt?.toDate
+                      ? msg.createdAt.toDate().toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "Sending..."}
+                  </span>
+                </div>
+
+                {/* Menu Trigger (Only for others) */}
+                {!isMe && (
+                  <div className='absolute top-2 -right-8 opacity-0 group-hover:opacity-100 transition-opacity'>
+                    <button
+                      onClick={() =>
+                        setActiveMenuMsgId(
+                          activeMenuMsgId === msg.id ? null : msg.id
+                        )
+                      }
+                      className='p-1 hover:bg-slate-800 rounded-full text-slate-500'
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                  </div>
                 )}
-              >
-                {msg.createdAt?.toDate
-                  ? msg.createdAt.toDate().toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "Sending..."}
-              </span>
-            </div>
-          );
-        })}
+
+                {/* Dropdown Menu */}
+                {activeMenuMsgId === msg.id && (
+                  <div className='absolute top-8 -right-20 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-10 w-32 py-1 flex flex-col overflow-hidden'>
+                    <button
+                      onClick={() => handleBlock(msg.senderId)}
+                      className='flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 w-full text-left'
+                    >
+                      <Ban size={12} className='text-red-400' /> Block User
+                    </button>
+                    <button
+                      onClick={() => {
+                        setReportingMsg(msg);
+                        setActiveMenuMsgId(null);
+                      }}
+                      className='flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 w-full text-left'
+                    >
+                      <Flag size={12} className='text-orange-400' /> Report
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </div>
 
       {/* Input Area */}
@@ -240,6 +343,62 @@ export function ChatWindow({ groupId, currentUserId }: ChatWindowProps) {
           </Button>
         </form>
       </div>
+      {/* Report Modal */}
+      {reportingMsg && (
+        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4'>
+          <div className='bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl'>
+            <div className='flex justify-between items-center mb-4'>
+              <h3 className='font-bold text-white'>Report Message</h3>
+              <button
+                onClick={() => setReportingMsg(null)}
+                className='text-slate-500 hover:text-white'
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className='text-slate-400 text-sm mb-4 bg-slate-800 p-3 rounded-lg italic'>
+              "{reportingMsg.text}"
+            </p>
+
+            <form onSubmit={handleReport} className='space-y-4'>
+              <div>
+                <label className='text-xs text-slate-500 mb-1 block'>
+                  Reason for report
+                </label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className='w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500'
+                  required
+                >
+                  <option value=''>Select a reason...</option>
+                  <option value='spam'>Spam or unwanted</option>
+                  <option value='harassment'>Harassment or bullying</option>
+                  <option value='hate_speech'>Hate speech</option>
+                  <option value='sensitive'>Sensitive content</option>
+                  <option value='other'>Other</option>
+                </select>
+              </div>
+              <div className='flex justify-end gap-2 pt-2'>
+                <Button
+                  type='button'
+                  variant='ghost'
+                  onClick={() => setReportingMsg(null)}
+                  className='text-slate-400 hover:text-white hover:bg-slate-800'
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type='submit'
+                  className='bg-orange-600 hover:bg-orange-500 text-white'
+                >
+                  Submit Report
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
