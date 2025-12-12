@@ -11,18 +11,28 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-
 import { Plus, Search, ChevronLeft, Users } from "lucide-react";
 import { useUnion } from "@/app/(components)/union-provider";
 
-// ... (Types and CreateGroupModal remain unchanged) ...
+interface Group {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  members: string[];
+}
+
+interface CreateGroupData {
+  name: string;
+  description: string;
+}
 
 const CreateGroupModal = ({
   onClose,
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: (data: any) => void;
+  onCreate: (data: CreateGroupData) => void;
 }) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -89,11 +99,10 @@ const CreateGroupModal = ({
 export default function GroupsPage() {
   const router = useRouter();
   const { currentUnion, isLoading } = useUnion();
-  const [groups, setGroups] = useState<any[]>([]); // simplified type for brevity
+  const [groups, setGroups] = useState<Group[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
 
-  // Fetch Groups (Scoped to Union)
   useEffect(() => {
     if (!currentUnion) return;
 
@@ -108,7 +117,7 @@ export default function GroupsPage() {
         const groupsList = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        }));
+        })) as Group[];
         setGroups(groupsList);
         setDataLoading(false);
       },
@@ -121,8 +130,7 @@ export default function GroupsPage() {
     return () => unsubscribe();
   }, [currentUnion]);
 
-  // Create Group
-  const handleCreateGroup = async ({ name, description }: any) => {
+  const handleCreateGroup = async ({ name, description }: CreateGroupData) => {
     if (!auth.currentUser || !currentUnion) return;
 
     const colors = [
@@ -163,7 +171,6 @@ export default function GroupsPage() {
 
   return (
     <div className='min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 font-sans pb-24 transition-colors duration-300'>
-      {/* Page Header */}
       <div className='p-6 pt-8'>
         <div className='flex justify-between items-center mb-6'>
           <div>
@@ -182,7 +189,6 @@ export default function GroupsPage() {
           </button>
         </div>
 
-        {/* Search Bar */}
         <div className='relative mb-6'>
           <Search
             className='absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400'
@@ -195,7 +201,6 @@ export default function GroupsPage() {
           />
         </div>
 
-        {/* Groups List */}
         <div className='space-y-3'>
           {groups.length === 0 ? (
             <div className='text-center py-12 bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 border-dashed'>
@@ -243,7 +248,6 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      {/* Modals */}
       {showCreateModal && (
         <CreateGroupModal
           onClose={() => setShowCreateModal(false)}

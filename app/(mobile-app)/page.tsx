@@ -20,7 +20,6 @@ import {
   Users,
   Bell,
   MessageSquare,
-  ChevronRight,
   Activity,
   Megaphone,
   AlertCircle,
@@ -28,6 +27,7 @@ import {
   Info,
   Check,
   Building2,
+  ChevronRight,
 } from "lucide-react";
 import { useUnion } from "../(components)/union-provider";
 
@@ -61,7 +61,7 @@ const formatTimeAgo = (date: Date) => {
 };
 
 const AnnouncementCard = ({ item }: { item: Announcement }) => {
-  const styles = {
+  const styles: Record<string, string> = {
     URGENT:
       "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-200",
     EVENT:
@@ -70,7 +70,7 @@ const AnnouncementCard = ({ item }: { item: Announcement }) => {
       "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-200",
   };
 
-  const icon = {
+  const icon: Record<string, React.ReactNode> = {
     URGENT: (
       <AlertCircle size={18} className='text-red-500 dark:text-red-400' />
     ),
@@ -143,8 +143,6 @@ export default function HomePage() {
   // 2. Fetch Data (Dependent on Union)
   useEffect(() => {
     const fetchHomeData = async () => {
-      // If user is logged in but Union is missing (e.g. redirected to Get Started),
-      // stop loading so we don't block the UI with a spinner.
       if (user && !currentUnion && !unionLoading) {
         setLoading(false);
         return;
@@ -156,7 +154,7 @@ export default function HomePage() {
         setLoading(true);
         const unionId = currentUnion.id;
 
-        // A. Announcements (Scoped to Union)
+        // A. Announcements
         const annQuery = query(
           collection(db, "unions", unionId, "announcements"),
           orderBy("createdAt", "desc"),
@@ -169,7 +167,7 @@ export default function HomePage() {
         })) as Announcement[];
         setAnnouncements(annList);
 
-        // B. Groups (Scoped to Union)
+        // B. Groups
         const groupQuery = query(
           collection(db, "unions", unionId, "groups"),
           where("members", "array-contains", user.uid)
@@ -177,7 +175,7 @@ export default function HomePage() {
         const groupSnaps = await getDocs(groupQuery);
         setActiveGroupCount(groupSnaps.size);
 
-        // C. Messages (Scoped to Union)
+        // C. Messages
         const activityPromises = groupSnaps.docs.map(async (groupDoc) => {
           const groupData = groupDoc.data();
           const groupId = groupDoc.id;
@@ -271,19 +269,15 @@ export default function HomePage() {
     );
   }
 
-  // If we are done loading but still have no union, render nothing
-  // (The UnionProvider is likely redirecting us to /get-started as we speak)
   if (!currentUnion) {
     return null;
   }
 
   return (
     <div className='min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 text-slate-900 dark:text-slate-200 transition-colors duration-300'>
-      {/* Header */}
       <div className='p-6 pt-8'>
         <header className='flex justify-between items-center mb-8'>
           <div>
-            {/* Union Name Badge */}
             <div className='flex items-center gap-2 mb-1 opacity-70'>
               <Building2 size={12} />
               <span className='text-xs font-bold tracking-widest uppercase'>
@@ -319,7 +313,6 @@ export default function HomePage() {
           </button>
         </header>
 
-        {/* Announcements Section */}
         {announcements.length > 0 && (
           <div className='mb-8'>
             <h3 className='text-slate-400 text-xs font-bold uppercase tracking-wider mb-3 ml-1 flex items-center gap-2'>
@@ -331,7 +324,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Stats Grid */}
         <div className='grid grid-cols-2 gap-4 mb-8'>
           <div
             onClick={() => router.push("/groups")}
@@ -354,7 +346,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Recent Activity Feed */}
         <div className='bg-white dark:bg-slate-900/50 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm'>
           <h3 className='text-slate-900 dark:text-white font-bold mb-4 flex items-center gap-2'>
             <MessageSquare size={16} className='text-blue-500' />
@@ -379,14 +370,12 @@ export default function HomePage() {
                   onClick={() => router.push(`/groups/${item.groupId}`)}
                   className='flex gap-4 items-start p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors cursor-pointer group'
                 >
-                  {/* Group Avatar */}
                   <div
                     className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-white shadow-md ${item.groupColor}`}
                   >
                     {item.groupName.substring(0, 2).toUpperCase()}
                   </div>
 
-                  {/* Content */}
                   <div className='flex-1 min-w-0'>
                     <div className='flex justify-between items-center mb-0.5'>
                       <span className='text-slate-900 dark:text-white text-sm font-bold truncate pr-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors'>

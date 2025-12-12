@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  Timestamp,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   Folder,
@@ -14,7 +20,6 @@ import {
   Eye,
 } from "lucide-react";
 
-// ... (Types remain same) ...
 interface Resource {
   id: string;
   title: string;
@@ -23,14 +28,22 @@ interface Resource {
   type: "LINK" | "TEXT" | "FILE";
   category: "General" | "Chants" | "Bylaws" | "Tifo";
   visibility?: "PUBLIC" | "ADMIN";
-  createdAt: any;
+  createdAt: Timestamp | null;
 }
 
-// ... (Helper Components remain same) ...
 const CategoryBadge = ({ category }: { category: string }) => {
-  // Simplified for brevity, assume same color logic or adapted for light/dark
+  const colors: Record<string, string> = {
+    General: "bg-slate-700 text-slate-200",
+    Chants: "bg-purple-900/50 text-purple-200 border-purple-700/50",
+    Bylaws: "bg-blue-900/50 text-blue-200 border-blue-700/50",
+    Tifo: "bg-orange-900/50 text-orange-200 border-orange-700/50",
+  };
   return (
-    <span className='px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200'>
+    <span
+      className={`px-2 py-0.5 rounded text-[10px] font-medium border border-transparent ${
+        colors[category] || colors["General"]
+      }`}
+    >
       {category}
     </span>
   );
@@ -39,17 +52,11 @@ const CategoryBadge = ({ category }: { category: string }) => {
 const ResourceIcon = ({ type }: { type: string }) => {
   switch (type) {
     case "LINK":
-      return (
-        <LinkIcon size={18} className='text-blue-500 dark:text-blue-400' />
-      );
+      return <LinkIcon size={18} className='text-blue-400' />;
     case "TEXT":
-      return (
-        <FileText size={18} className='text-slate-500 dark:text-slate-400' />
-      );
+      return <FileText size={18} className='text-slate-400' />;
     case "FILE":
-      return (
-        <File size={18} className='text-yellow-500 dark:text-yellow-400' />
-      );
+      return <File size={18} className='text-yellow-400' />;
     default:
       return <FileText size={18} />;
   }
@@ -64,6 +71,7 @@ export default function VaultPage() {
 
   useEffect(() => {
     const q = query(collection(db, "resources"), orderBy("createdAt", "desc"));
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -71,13 +79,18 @@ export default function VaultPage() {
           id: doc.id,
           ...doc.data(),
         })) as Resource[];
+
         const publicItems = allItems.filter(
           (item) => item.visibility === "PUBLIC" || !item.visibility
         );
+
         setResources(publicItems);
         setLoading(false);
       },
-      () => setLoading(false)
+      (error) => {
+        console.error("Error fetching vault resources:", error);
+        setLoading(false);
+      }
     );
     return () => unsubscribe();
   }, []);
@@ -93,16 +106,17 @@ export default function VaultPage() {
 
   const categories = ["All", "General", "Chants", "Bylaws", "Tifo"];
 
-  if (loading)
+  if (loading) {
     return (
-      <div className='flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500'>
-        Loading...
+      <div className='flex flex-col items-center justify-center h-full min-h-[50vh] text-slate-500'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4'></div>
+        <p>Opening Vault...</p>
       </div>
     );
+  }
 
   return (
     <div className='min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 p-4 pb-24 transition-colors duration-300'>
-      {/* Header */}
       <div className='flex justify-between items-center mb-6 pt-4'>
         <div>
           <h1 className='text-2xl font-bold text-slate-900 dark:text-white'>
@@ -114,7 +128,6 @@ export default function VaultPage() {
         </div>
       </div>
 
-      {/* Search & Filter */}
       <div className='space-y-4 mb-6'>
         <div className='relative'>
           <Search
@@ -137,7 +150,7 @@ export default function VaultPage() {
               onClick={() => setSelectedCategory(cat)}
               className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${
                 selectedCategory === cat
-                  ? "bg-slate-200 dark:bg-slate-200 text-slate-900 border-slate-200"
+                  ? "bg-slate-200 text-slate-900 border-slate-200"
                   : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
               }`}
             >
@@ -147,7 +160,6 @@ export default function VaultPage() {
         </div>
       </div>
 
-      {/* Resource List */}
       <div className='space-y-3'>
         {filteredResources.length === 0 ? (
           <div className='text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl'>
@@ -203,7 +215,6 @@ export default function VaultPage() {
         )}
       </div>
 
-      {/* Read Text Modal */}
       {viewingResource && (
         <div className='fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4'>
           <div className='bg-white dark:bg-slate-950 w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col max-h-[80vh] shadow-2xl'>
@@ -214,6 +225,11 @@ export default function VaultPage() {
                 </h2>
                 <div className='flex gap-2 mt-1'>
                   <CategoryBadge category={viewingResource.category} />
+                  <span className='text-xs text-slate-500 py-0.5'>
+                    {viewingResource.createdAt?.toDate
+                      ? viewingResource.createdAt.toDate().toLocaleDateString()
+                      : ""}
+                  </span>
                 </div>
               </div>
               <button

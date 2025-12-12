@@ -215,17 +215,24 @@ export default function ProfilePage() {
       await deleteDoc(doc(db, "users", user.uid));
       await deleteUser(user);
       router.push("/login");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting account:", error);
       setIsDeleting(false);
       setShowDeleteConfirm(false);
 
-      if (error.code === "auth/requires-recent-login") {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as { code: string }).code === "auth/requires-recent-login"
+      ) {
         alert(
           "For security, you must have recently signed in to delete your account. Please Log Out and Log In again, then try deleting your account."
         );
       } else {
-        alert("Failed to delete account: " + error.message);
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error occurred";
+        alert("Failed to delete account: " + errorMessage);
       }
     }
   };
