@@ -11,6 +11,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "The Union Hub",
   description: "Supporter Operations Platform",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
