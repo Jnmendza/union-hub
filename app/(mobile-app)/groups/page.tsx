@@ -104,8 +104,10 @@ export default function GroupsPage() {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
+    // If no union is selected yet, wait.
     if (!currentUnion) return;
 
+    // PATH: unions/{unionId}/groups
     const q = query(
       collection(db, "unions", currentUnion.id, "groups"),
       orderBy("createdAt", "desc")
@@ -123,6 +125,7 @@ export default function GroupsPage() {
       },
       (error) => {
         console.error("Error fetching groups:", error);
+        // Important: Stop loading state so page isn't blank
         setDataLoading(false);
       }
     );
@@ -146,6 +149,7 @@ export default function GroupsPage() {
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
     try {
+      // PATH: unions/{unionId}/groups
       await addDoc(collection(db, "unions", currentUnion.id, "groups"), {
         name,
         description,
@@ -157,6 +161,7 @@ export default function GroupsPage() {
       setShowCreateModal(false);
     } catch (e) {
       console.error("Error creating group:", e);
+      alert("Permission Denied. Check console for details.");
     }
   };
 
