@@ -205,7 +205,7 @@ export function ChatWindow({
     <div className='flex h-full flex-col bg-slate-950'>
       <div
         ref={scrollRef}
-        className='flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar'
+        className='flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar flex flex-col'
       >
         {messages.length === 0 && (
           <div className='flex h-full items-center justify-center text-slate-500 text-sm'>

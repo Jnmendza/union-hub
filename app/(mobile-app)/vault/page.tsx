@@ -8,7 +8,7 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import {
   Folder,
   FileText,
@@ -70,6 +70,9 @@ export default function VaultPage() {
   const [viewingResource, setViewingResource] = useState<Resource | null>(null);
 
   useEffect(() => {
+    if (!auth.currentUser) {
+      return;
+    }
     const q = query(collection(db, "resources"), orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(

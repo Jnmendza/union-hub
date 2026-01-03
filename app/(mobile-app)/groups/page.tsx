@@ -105,7 +105,10 @@ export default function GroupsPage() {
 
   useEffect(() => {
     // If no union is selected yet, wait.
-    if (!currentUnion) return;
+    if (!auth.currentUser || !currentUnion) {
+      setDataLoading(false);
+      return;
+    }
 
     // PATH: unions/{unionId}/groups
     const q = query(

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { User, Mail, Lock, Eye, EyeOff, Check, Loader2 } from "lucide-react"; // Added Loader2
+import { User, Mail, Lock, Eye, EyeOff, Check, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function RegisterPage() {
@@ -23,17 +23,19 @@ export default function RegisterPage() {
   const [eulaAgreed, setEulaAgreed] = useState(false);
 
   const [error, setError] = useState("");
+  // NEW: Specific error state for DOB
+  const [dobError, setDobError] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Validation - Derived State
-  const validations = {
-    minLength: password.length >= 8,
-    hasNumber: /\d/.test(password),
-    hasUpper: /[A-Z]/.test(password),
-    match: password.length > 0 && password === confirmPass,
-    age: false, // will update dynamically
-    eula: eulaAgreed,
-  };
+  const [validations, setValidations] = useState({
+    minLength: false,
+    hasNumber: false,
+    hasUpper: false,
+    match: false,
+    age: false,
+    eula: false,
+  });
 
   // Age Calculation
   const calculateAge = (dobString: string) => {
@@ -48,8 +50,27 @@ export default function RegisterPage() {
     return age;
   };
 
-  const age = calculateAge(dateOfBirth);
-  validations.age = age >= 18;
+  // Run validation on every change
+  useEffect(() => {
+    const age = calculateAge(dateOfBirth);
+    const isAdult = age >= 18;
+
+    // UX Improvement: Show error immediately if date is selected but invalid
+    if (dateOfBirth && !isAdult) {
+      setDobError("You must be at least 18 years old to join.");
+    } else {
+      setDobError("");
+    }
+
+    setValidations({
+      minLength: password.length >= 8,
+      hasNumber: /\d/.test(password),
+      hasUpper: /[A-Z]/.test(password),
+      match: password.length > 0 && password === confirmPass,
+      age: isAdult,
+      eula: eulaAgreed,
+    });
+  }, [password, confirmPass, dateOfBirth, eulaAgreed]);
 
   const isFormValid =
     Object.values(validations).every(Boolean) && email.length > 0;
@@ -94,9 +115,8 @@ export default function RegisterPage() {
           .replace("Error (auth/", "")
           .replace(").", "")
       );
-      setLoading(false); // Stop loading on error
+      setLoading(false);
     }
-    // Note: We don't stop loading on success because we are redirecting
   };
 
   return (
@@ -161,17 +181,35 @@ export default function RegisterPage() {
             </button>
           </div>
 
-          <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex flex-col gap-1 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all'>
-            <label className='text-xs text-slate-500 ml-1'>
-              Date of Birth (Must be 18+)
-            </label>
-            <input
-              type='date'
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
-              className='bg-transparent text-white w-full focus:outline-none placeholder-slate-600 text-sm [color-scheme:dark]'
-              required
-            />
+          <div className='space-y-1'>
+            <div
+              className={`bg-slate-900 border rounded-xl px-4 py-3 flex flex-col gap-1 transition-all ${
+                dobError
+                  ? "border-red-500 ring-1 ring-red-500"
+                  : "border-slate-800 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500"
+              }`}
+            >
+              <label
+                className={`text-xs ml-1 ${
+                  dobError ? "text-red-500" : "text-slate-500"
+                }`}
+              >
+                Date of Birth (Must be 18+)
+              </label>
+              <input
+                type='date'
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                className='bg-transparent text-white w-full focus:outline-none placeholder-slate-600 text-sm [color-scheme:dark]'
+                required
+              />
+            </div>
+            {/* NEW: Inline Error Message */}
+            {dobError && (
+              <p className='text-red-400 text-xs px-1 animate-in slide-in-from-top-1'>
+                {dobError}
+              </p>
+            )}
           </div>
 
           <div className='flex items-start gap-3 px-1'>
