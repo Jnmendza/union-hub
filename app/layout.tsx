@@ -7,6 +7,7 @@ import { UnionProvider } from "./(components)/union-provider";
 import { GoogleAnalytics } from "@next/third-parties/google";
 
 const inter = Inter({ subsets: ["latin"] });
+import FcmListener from "@/components/FcmListener";
 
 export const metadata: Metadata = {
   title: "The Union Hub",
@@ -39,7 +40,10 @@ export default function RootLayout({
           - shadow-2xl: Adds depth so it pops off the desktop background
         */}
           <UnionProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <FcmListener />
+              {children}
+            </AuthProvider>
           </UnionProvider>
         </ThemeProvider>
         <GoogleAnalytics

@@ -26,15 +26,15 @@ const requiredKeys = [
 ];
 
 const missingKeys = requiredKeys.filter(
-  (key) => !firebaseConfig[key as keyof typeof firebaseConfig]
+  (key) => !firebaseConfig[key as keyof typeof firebaseConfig],
 );
 
 if (missingKeys.length > 0) {
   console.error(
-    `Missing Firebase configuration keys: ${missingKeys.join(", ")}`
+    `Missing Firebase configuration keys: ${missingKeys.join(", ")}`,
   );
   console.error(
-    "Please check your .env.local file. See README.md for setup instructions."
+    "Please check your .env.local file. See README.md for setup instructions.",
   );
 }
 
@@ -43,5 +43,4 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-
 export { app, auth, db, storage };
