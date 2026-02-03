@@ -50,6 +50,11 @@ export default function useFcmToken() {
   // 1. Initial Permission Check & Token Retrieval
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      // Clear app badge
+      if ("setAppBadge" in navigator) {
+        navigator.setAppBadge(0).catch((e) => console.log("Badge error", e));
+      }
+
       const perm = Notification.permission;
       setPermission(perm);
       if (perm === "granted") {

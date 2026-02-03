@@ -8,12 +8,12 @@ importScripts(
 // Initialize the Firebase app in the service worker by passing in the
 // messagingSenderId.
 firebase.initializeApp({
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDunk1_eNq1XTw9HMnxk3Pbe6qG3IO0isA",
+  authDomain: "union-hub-3d772.firebaseapp.com",
+  projectId: "union-hub-3d772",
+  storageBucket: "union-hub-3d772.firebasestorage.app",
+  messagingSenderId: "596945799752",
+  appId: "1:596945799752:web:ae73292b81653e25c3667d",
 });
 
 // Retrieve an instance of Firebase Messaging so that it can handle background
@@ -25,12 +25,48 @@ messaging.onBackgroundMessage((payload) => {
     "[firebase-messaging-sw.js] Received background message ",
     payload,
   );
-  // Customize notification here if needed
-  const notificationTitle = payload.notification.title;
+
+  // Parse data payload
+  const { title, body, tag, url } = payload.data;
+
+  const notificationTitle = title;
   const notificationOptions = {
-    body: payload.notification.body,
-    icon: "/icons/icon-192x192.png", // customized icon
+    body: body,
+    icon: "/icons/icon-192x192.png",
+    tag: tag, // Grouping/Stacking key
+    data: {
+      url: url, // Pass URL to click handler
+    },
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Handle Notification Click
+self.addEventListener("notificationclick", function (event) {
+  event.notification.close();
+
+  // Get URL from data
+  const urlToOpen = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    clients
+      .matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      })
+      .then(function (clientList) {
+        // If a window is already open, focus it
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          if (client.url.includes(urlToOpen) && "focus" in client) {
+            return client.focus();
+          }
+        }
+        // Otherwise open a new window
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      }),
+  );
 });
