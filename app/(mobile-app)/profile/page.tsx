@@ -34,7 +34,7 @@ import useFcmToken from "@/hooks/useFcmToken";
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const { requestPermission, permission } = useFcmToken();
+  const { requestPermission } = useFcmToken();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Data State

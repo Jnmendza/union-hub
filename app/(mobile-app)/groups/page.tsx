@@ -106,14 +106,13 @@ export default function GroupsPage() {
   useEffect(() => {
     // If no union is selected yet, wait.
     if (!auth.currentUser || !currentUnion) {
-      setDataLoading(false);
       return;
     }
 
     // PATH: unions/{unionId}/groups
     const q = query(
       collection(db, "unions", currentUnion.id, "groups"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
     );
 
     const unsubscribe = onSnapshot(
@@ -130,7 +129,7 @@ export default function GroupsPage() {
         console.error("Error fetching groups:", error);
         // Important: Stop loading state so page isn't blank
         setDataLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -168,7 +167,7 @@ export default function GroupsPage() {
     }
   };
 
-  if (isLoading || dataLoading) {
+  if (isLoading || (currentUnion && dataLoading)) {
     return (
       <div className='flex flex-col items-center justify-center h-screen bg-slate-50 dark:bg-slate-950 text-slate-500'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4'></div>

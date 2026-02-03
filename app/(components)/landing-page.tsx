@@ -240,7 +240,7 @@ export default function LandingPage() {
             <h3 className='text-xl font-bold mb-2'>The Vault</h3>
             <p className='text-slate-400 text-sm'>
               Store bylaws, chant sheets, and assets in one secure place. No
-              more "Can someone resend the PDF?"
+              more &quot;Can someone resend the PDF?&quot;
             </p>
           </div>
 
@@ -269,8 +269,9 @@ export default function LandingPage() {
                 Enterprise-Grade Security
               </h3>
               <p className='text-slate-400 max-w-md'>
-                Your data is isolated. Rivals can't see your chats, members, or
-                plans. Built on Google Firebase security infrastructure.
+                Your data is isolated. Rivals can&apos;t see your chats,
+                members, or plans. Built on Google Firebase security
+                infrastructure.
               </p>
             </div>
           </div>
@@ -288,7 +289,7 @@ export default function LandingPage() {
             Ready to organize your Union?
           </h2>
           <p className='text-blue-100 mb-8 max-w-xl mx-auto relative z-10'>
-            Join the beta today. It's free for inaugural supporters groups.
+            Join the beta today. It&apos;s free for inaugural supporters groups.
           </p>
           <div className='relative z-10 flex flex-col sm:flex-row gap-4 justify-center'>
             <button
