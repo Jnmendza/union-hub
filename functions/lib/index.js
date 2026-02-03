@@ -89,25 +89,21 @@ exports.sendChatNotification = (0, firestore_1.onDocumentCreated)("unions/{union
     // Deduplicate
     const uniqueTokens = [...new Set(tokens)];
     const payload = {
-        notification: {
+        data: {
             title: (groupData === null || groupData === void 0 ? void 0 : groupData.name) || "New Message",
             body: message.text || "You have a new photo message",
-        },
-        data: {
             unionId: unionId,
             groupId: groupId,
             messageId: event.params.messageId,
-            click_action: `/unions/${unionId}/groups/${groupId}`,
+            url: `/unions/${unionId}/groups/${groupId}`,
+            tag: `group-${groupId}`, // Grouping key
         },
     };
     // Send multicast
-    // limit 500 per batch. If > 500, chunk it.
-    // (Simple version for now)
     if (uniqueTokens.length > 0) {
         await admin.messaging().sendEachForMulticast({
             tokens: uniqueTokens,
-            notification: payload.notification,
-            data: payload.data,
+            data: payload.data, // Cast to any to avoid TS issues with custom keys if strict
         });
         console.log(`Sent to ${uniqueTokens.length} devices.`);
     }
@@ -133,19 +129,17 @@ exports.sendAnnouncementNotification = (0, firestore_1.onDocumentCreated)("union
     if (uniqueTokens.length === 0)
         return;
     const payload = {
-        notification: {
+        data: {
             title: "New Announcement: " + announcement.title,
             body: announcement.content,
-        },
-        data: {
             unionId: unionId,
             announcementId: announcementId,
-            url: `/`, // Open home or announcements page
+            url: `/`, // Opens home page
+            tag: `announcement-${announcementId}`, // Grouping key
         },
     };
     await admin.messaging().sendEachForMulticast({
         tokens: uniqueTokens,
-        notification: payload.notification,
         data: payload.data,
     });
     console.log(`Announcement sent to ${uniqueTokens.length} devices.`);
