@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- HELPER ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isBanned() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isBanned', false) == true;
+    }
+
+    function isGlobalAdmin() {
+       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'MEMBER') == 'ADMIN';
+    }
+
+    // --- 1. USERS ---
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update, delete: if isAuthenticated() && (request.auth.uid == userId || isGlobalAdmin());
+
+      // Allow users to manage their own FCM tokens subcollection
+      match /fcmTokens/{token} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
+
+    // --- 2. RESOURCES ---
+    match /resources/{resourceId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated() && !isBanned();
+    }
+
+    // --- 3. UNIONS & SUBCOLLECTIONS ---
+    match /unions/{unionId} {
+      // Allow reading the Union doc if you are authenticated (simplifies checks)
+      allow get: if isAuthenticated();
+      // Only allow listing unions if you are a member
+      allow list: if isAuthenticated() && (request.auth.uid in resource.data.memberIds);
+      
+      allow create: if isAuthenticated() && !isBanned();
+      allow update: if isAuthenticated() && !isBanned(); 
+
+      // A. ANNOUNCEMENTS
+      match /announcements/{announcementId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && !isBanned();
+      }
+
+      // B. GROUPS
+      match /groups/{groupId} {
+        // Explicitly allow reading groups if authenticated
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() && !isBanned();
+        
+        // C. MESSAGES
+        match /messages/{messageId} {
+          // Explicitly allow reading messages if authenticated
+          allow read: if isAuthenticated();
+          allow create: if isAuthenticated() && !isBanned();
+        }
+      }
+    }
+
+    // --- 4. REPORTS ---
+    match /reports/{reportId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAuthenticated() && isGlobalAdmin();
+    }
+  }
+}
