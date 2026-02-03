@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -24,19 +24,7 @@ export default function RegisterPage() {
 
   const [error, setError] = useState("");
   // NEW: Specific error state for DOB
-  const [dobError, setDobError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Validation - Derived State
-  const [validations, setValidations] = useState({
-    minLength: false,
-    hasNumber: false,
-    hasUpper: false,
-    match: false,
-    age: false,
-    eula: false,
-  });
-
   // Age Calculation
   const calculateAge = (dobString: string) => {
     if (!dobString) return 0;
@@ -50,27 +38,21 @@ export default function RegisterPage() {
     return age;
   };
 
-  // Run validation on every change
-  useEffect(() => {
-    const age = calculateAge(dateOfBirth);
-    const isAdult = age >= 18;
+  const age = calculateAge(dateOfBirth);
+  const isAdult = age >= 18;
 
-    // UX Improvement: Show error immediately if date is selected but invalid
-    if (dateOfBirth && !isAdult) {
-      setDobError("You must be at least 18 years old to join.");
-    } else {
-      setDobError("");
-    }
+  // UX Improvement: Show error immediately if date is selected but invalid
+  const dobError =
+    dateOfBirth && !isAdult ? "You must be at least 18 years old to join." : "";
 
-    setValidations({
-      minLength: password.length >= 8,
-      hasNumber: /\d/.test(password),
-      hasUpper: /[A-Z]/.test(password),
-      match: password.length > 0 && password === confirmPass,
-      age: isAdult,
-      eula: eulaAgreed,
-    });
-  }, [password, confirmPass, dateOfBirth, eulaAgreed]);
+  const validations = {
+    minLength: password.length >= 8,
+    hasNumber: /\d/.test(password),
+    hasUpper: /[A-Z]/.test(password),
+    match: password.length > 0 && password === confirmPass,
+    age: isAdult,
+    eula: eulaAgreed,
+  };
 
   const isFormValid =
     Object.values(validations).every(Boolean) && email.length > 0;
@@ -86,7 +68,7 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
       const user = userCredential.user;
 
@@ -113,7 +95,7 @@ export default function RegisterPage() {
         errorMessage
           .replace("Firebase: ", "")
           .replace("Error (auth/", "")
-          .replace(").", "")
+          .replace(").", ""),
       );
       setLoading(false);
     }

@@ -29,10 +29,12 @@ import {
   Trash2,
   AlertTriangle,
 } from "lucide-react";
+import useFcmToken from "@/hooks/useFcmToken";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const { requestPermission } = useFcmToken();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Data State
@@ -134,7 +136,7 @@ export default function ProfilePage() {
       if (avatarFile) {
         const storageRef = ref(
           storage,
-          `avatars/${user.uid}/profile_${Date.now()}`
+          `avatars/${user.uid}/profile_${Date.now()}`,
         );
         const snapshot = await uploadBytes(storageRef, avatarFile);
         finalPhotoURL = await getDownloadURL(snapshot.ref);
@@ -149,7 +151,7 @@ export default function ProfilePage() {
           email: user.email,
           updatedAt: new Date().toISOString(),
         },
-        { merge: true }
+        { merge: true },
       );
 
       setPhotoURL(finalPhotoURL);
@@ -169,7 +171,33 @@ export default function ProfilePage() {
 
   const toggleNotifications = async () => {
     if (!user) return;
-    const newState = !notificationsEnabled;
+
+    // If user is trying to enable notifications
+    if (!notificationsEnabled) {
+      try {
+        await requestPermission();
+        // We rely on the hook to get the permission, but for the UI toggle:
+        // If permission is granted (or already granted), we update Firebase
+        if (Notification.permission === "granted") {
+          const newState = true;
+          setNotificationsEnabled(newState);
+          await updateDoc(doc(db, "users", user.uid), {
+            notificationsEnabled: newState,
+          });
+          return;
+        } else {
+          // Permission denied or dismissed
+          alert("Please enable notifications in your browser settings.");
+          return;
+        }
+      } catch (e) {
+        console.error("Error requesting permission", e);
+        return;
+      }
+    }
+
+    // If user is trying to disable notifications
+    const newState = false;
     setNotificationsEnabled(newState);
 
     try {
@@ -227,7 +255,7 @@ export default function ProfilePage() {
         (error as { code: string }).code === "auth/requires-recent-login"
       ) {
         alert(
-          "For security, you must have recently signed in to delete your account. Please Log Out and Log In again, then try deleting your account."
+          "For security, you must have recently signed in to delete your account. Please Log Out and Log In again, then try deleting your account.",
         );
       } else {
         const errorMessage =

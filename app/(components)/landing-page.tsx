@@ -121,7 +121,13 @@ export default function LandingPage() {
                   </div>
                 </div>
                 {/* Replace this with real screenshot later */}
-                {/* <Image src="/screenshots/chat.png" alt="Chat UI" fill className="object-cover" /> */}
+
+                <Image
+                  src={`https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/landing%2Fchat.png?alt=media&token=1fa0d472-885b-414f-aa4d-da306bbe2c18`}
+                  alt='Chat UI'
+                  fill
+                  className='object-cover'
+                />
                 <div className='absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-slate-900 to-transparent'></div>
               </div>
               <div className='text-center mt-6 mb-2'>
@@ -148,7 +154,12 @@ export default function LandingPage() {
                     </span>
                   </div>
                 </div>
-                {/* <Image src="/screenshots/home.png" alt="Home UI" fill className="object-cover" /> */}
+                <Image
+                  src={`https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/landing%2Fhome.jpeg?alt=media&token=93a59859-f0a7-408e-bf11-7cf7d2b682c5`}
+                  alt='Home UI'
+                  fill
+                  className='object-cover'
+                />
               </div>
               <div className='text-center mt-6 mb-2'>
                 <h3 className='text-xl font-bold text-white mb-1'>
@@ -174,7 +185,12 @@ export default function LandingPage() {
                     </span>
                   </div>
                 </div>
-                {/* <Image src="/screenshots/id.png" alt="ID UI" fill className="object-cover" /> */}
+                <Image
+                  src={`https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/landing%2Fid.jpeg?alt=media&token=0707ead4-0a9e-4237-8170-5b399b2990d3`}
+                  alt='ID UI'
+                  fill
+                  className='object-cover'
+                />
                 <div className='absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-slate-900 to-transparent'></div>
               </div>
               <div className='text-center mt-6 mb-2'>
@@ -224,7 +240,7 @@ export default function LandingPage() {
             <h3 className='text-xl font-bold mb-2'>The Vault</h3>
             <p className='text-slate-400 text-sm'>
               Store bylaws, chant sheets, and assets in one secure place. No
-              more "Can someone resend the PDF?"
+              more &quot;Can someone resend the PDF?&quot;
             </p>
           </div>
 
@@ -253,8 +269,9 @@ export default function LandingPage() {
                 Enterprise-Grade Security
               </h3>
               <p className='text-slate-400 max-w-md'>
-                Your data is isolated. Rivals can't see your chats, members, or
-                plans. Built on Google Firebase security infrastructure.
+                Your data is isolated. Rivals can&apos;t see your chats,
+                members, or plans. Built on Google Firebase security
+                infrastructure.
               </p>
             </div>
           </div>
@@ -272,7 +289,7 @@ export default function LandingPage() {
             Ready to organize your Union?
           </h2>
           <p className='text-blue-100 mb-8 max-w-xl mx-auto relative z-10'>
-            Join the beta today. It's free for inaugural supporters groups.
+            Join the beta today. It&apos;s free for inaugural supporters groups.
           </p>
           <div className='relative z-10 flex flex-col sm:flex-row gap-4 justify-center'>
             <button
