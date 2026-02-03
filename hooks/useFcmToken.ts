@@ -9,6 +9,25 @@ export default function useFcmToken() {
   const [permission, setPermission] =
     useState<NotificationPermission>("default");
 
+  const retrieveToken = async () => {
+    try {
+      const messaging = getMessaging(app);
+      const currentToken = await getToken(messaging, {
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+      });
+      if (currentToken) {
+        setToken(currentToken);
+        // console.log("FCM Token:", currentToken);
+      } else {
+        console.log(
+          "No registration token available. Request permission to generate one.",
+        );
+      }
+    } catch (error) {
+      console.log("An error occurred while retrieving token. ", error);
+    }
+  };
+
   const requestPermission = async () => {
     // only run on client
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
@@ -20,29 +39,22 @@ export default function useFcmToken() {
       setPermission(perm);
 
       if (perm === "granted") {
-        const messaging = getMessaging(app);
-        const currentToken = await getToken(messaging, {
-          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-        });
-
-        if (currentToken) {
-          setToken(currentToken);
-          console.log("FCM Token:", currentToken);
-        } else {
-          console.log(
-            "No registration token available. Request permission to generate one.",
-          );
-        }
+        await retrieveToken();
       }
     } catch (error) {
-      console.log("An error occurred while retrieving token. ", error);
+      console.log("Error requesting permission", error);
     }
   };
 
   // 1. Initial Permission Check
+  // 1. Initial Permission Check & Token Retrieval
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      setPermission(Notification.permission);
+      const perm = Notification.permission;
+      setPermission(perm);
+      if (perm === "granted") {
+        retrieveToken();
+      }
     }
   }, []);
 
