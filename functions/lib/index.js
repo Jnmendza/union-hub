@@ -103,7 +103,9 @@ exports.sendChatNotification = (0, firestore_1.onDocumentCreated)("unions/{union
     if (uniqueTokens.length > 0) {
         await admin.messaging().sendEachForMulticast({
             tokens: uniqueTokens,
-            data: payload.data, // Cast to any to avoid TS issues with custom keys if strict
+            data: payload.data,
+            android: { priority: "high" },
+            webpush: { headers: { Urgency: "high" } },
         });
         console.log(`Sent to ${uniqueTokens.length} devices.`);
     }
@@ -141,6 +143,8 @@ exports.sendAnnouncementNotification = (0, firestore_1.onDocumentCreated)("union
     await admin.messaging().sendEachForMulticast({
         tokens: uniqueTokens,
         data: payload.data,
+        android: { priority: "high" },
+        webpush: { headers: { Urgency: "high" } },
     });
     console.log(`Announcement sent to ${uniqueTokens.length} devices.`);
 });
