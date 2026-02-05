@@ -133,7 +133,9 @@ export const sendChatNotification = onDocumentCreated(
     if (uniqueTokens.length > 0) {
       await admin.messaging().sendEachForMulticast({
         tokens: uniqueTokens,
-        data: payload.data as any, // Cast to any to avoid TS issues with custom keys if strict
+        data: payload.data as any,
+        android: { priority: "high" },
+        webpush: { headers: { Urgency: "high" } },
       });
       console.log(`Sent to ${uniqueTokens.length} devices.`);
     }
@@ -180,6 +182,8 @@ export const sendAnnouncementNotification = onDocumentCreated(
     await admin.messaging().sendEachForMulticast({
       tokens: uniqueTokens,
       data: payload.data as any,
+      android: { priority: "high" },
+      webpush: { headers: { Urgency: "high" } },
     });
 
     console.log(`Announcement sent to ${uniqueTokens.length} devices.`);
