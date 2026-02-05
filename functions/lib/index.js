@@ -95,7 +95,7 @@ exports.sendChatNotification = (0, firestore_1.onDocumentCreated)("unions/{union
             unionId: unionId,
             groupId: groupId,
             messageId: event.params.messageId,
-            url: `/unions/${unionId}/groups/${groupId}`,
+            url: `/groups/${groupId}`,
             tag: `group-${groupId}`, // Grouping key
         },
     };

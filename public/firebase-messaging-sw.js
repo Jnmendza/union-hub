@@ -33,13 +33,17 @@ messaging.onBackgroundMessage((payload) => {
   const notificationOptions = {
     body: body,
     icon: "/icons/icon-192x192.png",
+    badge: "/icons/badge-monochrome.png", // Small Status Bar Icon (Must be white/transparent)
     tag: tag, // Grouping/Stacking key
     data: {
       url: url, // Pass URL to click handler
     },
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  return self.registration.showNotification(
+    notificationTitle,
+    notificationOptions,
+  );
 });
 
 // Handle Notification Click
