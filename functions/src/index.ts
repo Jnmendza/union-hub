@@ -124,7 +124,7 @@ export const sendChatNotification = onDocumentCreated(
         unionId: unionId,
         groupId: groupId,
         messageId: event.params.messageId,
-        url: `/unions/${unionId}/groups/${groupId}`,
+        url: `/groups/${groupId}`,
         tag: `group-${groupId}`, // Grouping key
       },
     };
