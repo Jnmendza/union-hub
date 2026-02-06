@@ -35,6 +35,7 @@ messaging.onBackgroundMessage((payload) => {
     icon: "/icons/icon-192x192.png",
     badge: "/icons/badge-monochrome.png", // Small Status Bar Icon (Must be white/transparent)
     tag: tag, // Grouping/Stacking key
+    renotify: true, // Alert user again even if tag exists
     data: {
       url: url, // Pass URL to click handler
     },
