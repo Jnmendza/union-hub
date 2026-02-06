@@ -127,7 +127,7 @@ export default function AdminUsersPage() {
     (u) =>
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (u.memberId || "").includes(searchTerm)
+      (u.memberId || "").includes(searchTerm),
   );
 
   if (loading) {
@@ -188,8 +188,15 @@ export default function AdminUsersPage() {
                         {u.displayName.substring(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <div className='font-medium text-slate-900 dark:text-white text-sm'>
-                          {u.displayName}
+                        <div className='flex items-center gap-2'>
+                          <div className='font-medium text-slate-900 dark:text-white text-sm'>
+                            {u.displayName}
+                          </div>
+                          {u.isBanned && (
+                            <span className='px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800 tracking-wider'>
+                              BANNED
+                            </span>
+                          )}
                         </div>
                         <div className='text-slate-500 text-xs'>{u.email}</div>
                       </div>
