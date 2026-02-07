@@ -31,9 +31,11 @@ export default function LandingPage() {
         <div className='max-w-7xl mx-auto px-6 h-16 flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             {/* Logo */}
-            <img
+            <Image
               src='https://firebasestorage.googleapis.com/v0/b/union-hub-3d772.firebasestorage.app/o/landing%2FUH-transparent.png?alt=media&token=c5c24033-92c0-400d-a562-3918906a7f57'
               alt='Union Hub Logo'
+              width={40}
+              height={40}
               className='w-10 h-10 object-contain'
             />
             <span

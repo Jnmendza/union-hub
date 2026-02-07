@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   collection,
   getCountFromServer,
@@ -163,7 +164,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Back to App Link (Mobile Only) */}
-        <a
+        <Link
           href='/'
           className='bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-200 dark:border-slate-800 border-dashed hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-4 text-center md:text-left group cursor-pointer md:hidden'
         >
@@ -178,7 +179,7 @@ export default function AdminDashboardPage() {
               Back to App
             </h2>
           </div>
-        </a>
+        </Link>
       </div>
 
       {/* Recent Activity Placeholder */}
