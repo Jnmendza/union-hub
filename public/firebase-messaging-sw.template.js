@@ -26,25 +26,33 @@ messaging.onBackgroundMessage((payload) => {
     payload,
   );
 
-  // Parse data payload
-  const { title, body, tag, url } = payload.data;
+  try {
+    // Parse data payload
+    const { title, body, tag, url } = payload.data;
 
-  const notificationTitle = title;
-  const notificationOptions = {
-    body: body,
-    icon: "/icons/icon-192x192.png",
-    badge: "/icons/badge-monochrome.png", // Small Status Bar Icon (Must be white/transparent)
-    tag: tag, // Grouping/Stacking key
-    renotify: true, // Alert user again even if tag exists
-    data: {
-      url: url, // Pass URL to click handler
-    },
-  };
+    const notificationTitle = title;
+    const notificationOptions = {
+      body: body,
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/badge-monochrome.png", // Small Status Bar Icon (Must be white/transparent)
+      tag: tag, // Grouping/Stacking key
+      renotify: true, // Alert user again even if tag exists
+      data: {
+        url: url, // Pass URL to click handler
+      },
+    };
 
-  return self.registration.showNotification(
-    notificationTitle,
-    notificationOptions,
-  );
+    return self.registration.showNotification(
+      notificationTitle,
+      notificationOptions,
+    );
+  } catch (error) {
+    console.error(
+      "[firebase-messaging-sw.js] Error displaying notification",
+      error,
+    );
+    // Fallback? Or just suppressing the error is often enough to stop the "updated" message.
+  }
 });
 
 // Handle Notification Click
