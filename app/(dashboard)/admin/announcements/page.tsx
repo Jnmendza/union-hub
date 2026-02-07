@@ -78,7 +78,7 @@ export default function AdminAnnouncementsPage() {
   const [title, setTitle] = useState<string>("");
   const [content, setContent] = useState<string>("");
   const [category, setCategory] = useState<"URGENT" | "EVENT" | "GENERAL">(
-    "GENERAL"
+    "GENERAL",
   );
 
   // 1. Auth Listener
@@ -94,7 +94,7 @@ export default function AdminAnnouncementsPage() {
     // FIX: Path is now unions/{id}/announcements
     const q = query(
       collection(db, "unions", currentUnion.id, "announcements"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
     );
 
     const unsubscribe = onSnapshot(
@@ -110,7 +110,7 @@ export default function AdminAnnouncementsPage() {
       (error) => {
         console.error("Error fetching announcements:", error);
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -148,7 +148,7 @@ export default function AdminAnnouncementsPage() {
             title,
             content,
             category,
-          }
+          },
         );
       } else {
         // CREATE: unions/{uid}/announcements
@@ -160,7 +160,7 @@ export default function AdminAnnouncementsPage() {
             category,
             authorId: user.uid,
             createdAt: serverTimestamp(),
-          }
+          },
         );
       }
 
@@ -196,7 +196,7 @@ export default function AdminAnnouncementsPage() {
     );
 
   return (
-    <div className='p-6 w-full max-w-5xl mx-auto'>
+    <div className='p-4 md:p-6 w-full max-w-5xl mx-auto'>
       {/* Header */}
       <div className='flex justify-between items-center mb-8'>
         <div>
@@ -245,8 +245,8 @@ export default function AdminAnnouncementsPage() {
                   item.category === "URGENT"
                     ? "bg-red-100 text-red-600 dark:bg-red-900/20"
                     : item.category === "EVENT"
-                    ? "bg-purple-100 text-purple-600 dark:bg-purple-900/20"
-                    : "bg-blue-100 text-blue-600 dark:bg-blue-900/20"
+                      ? "bg-purple-100 text-purple-600 dark:bg-purple-900/20"
+                      : "bg-blue-100 text-blue-600 dark:bg-blue-900/20"
                 }`}
               >
                 {item.category === "URGENT" ? (
@@ -300,8 +300,8 @@ export default function AdminAnnouncementsPage() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
-          <div className='bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6'>
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200'>
+          <div className='bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 max-h-[85vh] overflow-y-auto'>
             <div className='flex justify-between items-center mb-6'>
               <h2 className='text-xl font-bold text-slate-900 dark:text-white'>
                 {editId ? "Edit Announcement" : "New Announcement"}
@@ -380,8 +380,8 @@ export default function AdminAnnouncementsPage() {
                   {submitting
                     ? "Saving..."
                     : editId
-                    ? "Save Changes"
-                    : "Post Announcement"}
+                      ? "Save Changes"
+                      : "Post Announcement"}
                 </button>
               </div>
             </form>

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AdminSidebar } from "../(components)/admin-sidebar";
+import { AdminMobileNav } from "../(components)/admin-mobile-nav";
 import { useUnion } from "../(components)/union-provider";
 
 export default function DashboardLayout({
@@ -44,7 +45,12 @@ export default function DashboardLayout({
   return (
     <div className='flex min-h-screen bg-slate-50 dark:bg-slate-900'>
       <AdminSidebar />
-      <main className='flex-1 overflow-y-auto p-8'>{children}</main>
+      <div className='flex-1 flex flex-col min-h-screen'>
+        <main className='flex-1 overflow-y-auto p-4 pb-24 md:p-8 md:pb-8'>
+          {children}
+        </main>
+        <AdminMobileNav />
+      </div>
     </div>
   );
 }

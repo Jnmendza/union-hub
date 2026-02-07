@@ -158,7 +158,8 @@ export default function AdminUsersPage() {
       </div>
 
       <div className='bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm'>
-        <div className='overflow-x-auto'>
+        {/* Desktop Table View */}
+        <div className='hidden md:block overflow-x-auto'>
           <table className='w-full text-left border-collapse min-w-[800px]'>
             <thead className='bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase font-semibold'>
               <tr>
@@ -262,12 +263,104 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Card View */}
+        <div className='md:hidden space-y-4 p-4'>
+          {filteredUsers.map((u) => (
+            <div
+              key={u.id}
+              className='bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm'
+            >
+              <div className='flex justify-between items-start mb-3'>
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-400'>
+                    {u.displayName.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className='font-medium text-slate-900 dark:text-white'>
+                      {u.displayName}
+                    </div>
+                    <div className='text-xs text-slate-500'>{u.email}</div>
+                  </div>
+                </div>
+                {u.isBanned && (
+                  <span className='px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800 tracking-wider'>
+                    BANNED
+                  </span>
+                )}
+              </div>
+
+              <div className='grid grid-cols-2 gap-4 mb-4 text-sm'>
+                <div>
+                  <span className='block text-xs text-slate-400 mb-1'>
+                    Role
+                  </span>
+                  {u.role === "ADMIN" ? (
+                    <span className='inline-flex items-center gap-1 px-2 py-1 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium'>
+                      <Shield size={10} /> Admin
+                    </span>
+                  ) : u.role === "BOARD" ? (
+                    <span className='inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium'>
+                      <Shield size={10} /> Board
+                    </span>
+                  ) : (
+                    <span className='inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-medium'>
+                      <User size={10} /> Member
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <span className='block text-xs text-slate-400 mb-1'>
+                    Union ID
+                  </span>
+                  {u.memberId ? (
+                    <span className='font-mono text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-xs'>
+                      {u.memberId}
+                    </span>
+                  ) : (
+                    <span className='text-orange-500 text-xs bg-orange-100 dark:bg-orange-900/20 px-2 py-1 rounded'>
+                      Pending
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className='flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-3'>
+                <button
+                  onClick={() => handleBan(u)}
+                  className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium ${
+                    u.isBanned
+                      ? "text-red-600 bg-red-100 dark:bg-red-900/30"
+                      : "text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  <Ban size={14} />
+                  {u.isBanned ? "Unban" : "Ban"}
+                </button>
+                <button
+                  onClick={() => openEditModal(u)}
+                  className='p-2 text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium'
+                >
+                  <Edit2 size={14} />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(u.id)}
+                  className='p-2 text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium'
+                >
+                  <Trash2 size={14} />
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* EDIT USER MODAL */}
       {editingUser && (
-        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
-          <div className='bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6'>
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200'>
+          <div className='bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 max-h-[85vh] overflow-y-auto'>
             <div className='flex justify-between items-center mb-6'>
               <h2 className='text-xl font-bold text-slate-900 dark:text-white'>
                 Edit User

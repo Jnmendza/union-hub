@@ -16,6 +16,7 @@ import {
   Activity,
   Copy,
   Check,
+  ArrowLeft,
 } from "lucide-react";
 import { useUnion } from "@/app/(components)/union-provider";
 
@@ -114,52 +115,70 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full'>
+      {/* Stats Grid - 2x2 Mobile, 3-col Desktop */}
+      <div className='grid grid-cols-2 md:grid-cols-3 gap-4 w-full'>
         {/* Users Card */}
-        <div className='bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4'>
+        <div className='bg-white dark:bg-slate-900 p-4 md:p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-4 text-center md:text-left'>
           <div className='p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg'>
             <Users size={24} />
           </div>
           <div>
-            <p className='text-sm text-slate-500 dark:text-slate-400 font-medium'>
+            <p className='text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium'>
               Total Members
             </p>
-            <h2 className='text-3xl font-bold text-slate-900 dark:text-white'>
+            <h2 className='text-2xl md:text-3xl font-bold text-slate-900 dark:text-white'>
               {stats.users}
             </h2>
           </div>
         </div>
 
         {/* Groups Card */}
-        <div className='bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4'>
+        <div className='bg-white dark:bg-slate-900 p-4 md:p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-4 text-center md:text-left'>
           <div className='p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg'>
             <MessageSquare size={24} />
           </div>
           <div>
-            <p className='text-sm text-slate-500 dark:text-slate-400 font-medium'>
+            <p className='text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium'>
               Active Groups
             </p>
-            <h2 className='text-3xl font-bold text-slate-900 dark:text-white'>
+            <h2 className='text-2xl md:text-3xl font-bold text-slate-900 dark:text-white'>
               {stats.groups}
             </h2>
           </div>
         </div>
 
         {/* Resources Card */}
-        <div className='bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4'>
+        <div className='bg-white dark:bg-slate-900 p-4 md:p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-4 text-center md:text-left'>
           <div className='p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg'>
             <FileText size={24} />
           </div>
           <div>
-            <p className='text-sm text-slate-500 dark:text-slate-400 font-medium'>
+            <p className='text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium'>
               Vault Items
             </p>
-            <h2 className='text-3xl font-bold text-slate-900 dark:text-white'>
+            <h2 className='text-2xl md:text-3xl font-bold text-slate-900 dark:text-white'>
               {stats.resources}
             </h2>
           </div>
         </div>
+
+        {/* Back to App Link (Mobile Only) */}
+        <a
+          href='/'
+          className='bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-200 dark:border-slate-800 border-dashed hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-4 text-center md:text-left group cursor-pointer md:hidden'
+        >
+          <div className='p-3 bg-slate-200 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 rounded-lg group-hover:scale-110 transition-transform'>
+            <ArrowLeft size={24} />
+          </div>
+          <div>
+            <p className='text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium'>
+              Exit Dashboard
+            </p>
+            <h2 className='text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-1 justify-center md:justify-start'>
+              Back to App
+            </h2>
+          </div>
+        </a>
       </div>
 
       {/* Recent Activity Placeholder */}

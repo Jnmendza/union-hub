@@ -27,6 +27,7 @@ import {
   Info,
   Check,
   Building2,
+  LayoutDashboard,
 } from "lucide-react";
 import { useUnion } from "./(components)/union-provider";
 import LandingPage from "./(components)/landing-page";
@@ -168,7 +169,7 @@ export default function HomePage() {
         const annQuery = query(
           collection(db, "unions", unionId, "announcements"),
           orderBy("createdAt", "desc"),
-          limit(3)
+          limit(3),
         );
         const annSnaps = await getDocs(annQuery);
         const annList = annSnaps.docs.map((doc) => ({
@@ -180,7 +181,7 @@ export default function HomePage() {
         // B. Groups
         const groupQuery = query(
           collection(db, "unions", unionId, "groups"),
-          where("members", "array-contains", user.uid)
+          where("members", "array-contains", user.uid),
         );
         const groupSnaps = await getDocs(groupQuery);
         setActiveGroupCount(groupSnaps.size);
@@ -193,7 +194,7 @@ export default function HomePage() {
           const msgQuery = query(
             collection(db, "unions", unionId, "groups", groupId, "messages"),
             orderBy("createdAt", "desc"),
-            limit(1)
+            limit(1),
           );
           const msgSnaps = await getDocs(msgQuery);
 
@@ -218,10 +219,10 @@ export default function HomePage() {
 
         const results = await Promise.all(activityPromises);
         const validActivities = results.filter(
-          (item): item is ActivityItem => item !== null
+          (item): item is ActivityItem => item !== null,
         );
         validActivities.sort(
-          (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+          (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
         );
 
         setActivities(validActivities);
@@ -241,7 +242,7 @@ export default function HomePage() {
   useEffect(() => {
     if (loading || !currentUnion) return;
     const lastViewedStr = localStorage.getItem(
-      `notifications_viewed_${currentUnion.id}`
+      `notifications_viewed_${currentUnion.id}`,
     );
     const lastViewed = lastViewedStr ? new Date(lastViewedStr) : new Date(0);
 
@@ -263,7 +264,7 @@ export default function HomePage() {
     const now = new Date();
     localStorage.setItem(
       `notifications_viewed_${currentUnion.id}`,
-      now.toISOString()
+      now.toISOString(),
     );
     setUnreadCount(0);
     setJustCleared(true);
@@ -323,31 +324,41 @@ export default function HomePage() {
                   </h1>
                 </div>
 
-                <button
-                  onClick={handleClearNotifications}
-                  className='w-10 h-10 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-800 relative hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm active:scale-95'
-                >
-                  {justCleared ? (
-                    <Check
-                      size={20}
-                      className='text-green-500 animate-in zoom-in'
-                    />
-                  ) : (
-                    <Bell
-                      size={20}
-                      className={
-                        unreadCount > 0
-                          ? "text-slate-900 dark:text-white"
-                          : "text-slate-400"
-                      }
-                    />
-                  )}
-                  {unreadCount > 0 && !justCleared && (
-                    <div className='absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-950 animate-in zoom-in'>
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </div>
-                  )}
-                </button>
+                {currentUnion?.role === "ADMIN" ? (
+                  <button
+                    onClick={() => router.push("/admin")}
+                    className='w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 hover:bg-blue-700 hover:scale-105 transition-all duration-200 active:scale-95'
+                    title='Go to Admin Dashboard'
+                  >
+                    <LayoutDashboard size={20} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleClearNotifications}
+                    className='w-10 h-10 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-800 relative hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm active:scale-95'
+                  >
+                    {justCleared ? (
+                      <Check
+                        size={20}
+                        className='text-green-500 animate-in zoom-in'
+                      />
+                    ) : (
+                      <Bell
+                        size={20}
+                        className={
+                          unreadCount > 0
+                            ? "text-slate-900 dark:text-white"
+                            : "text-slate-400"
+                        }
+                      />
+                    )}
+                    {unreadCount > 0 && !justCleared && (
+                      <div className='absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-950 animate-in zoom-in'>
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </div>
+                    )}
+                  </button>
+                )}
               </header>
 
               {/* Announcements */}

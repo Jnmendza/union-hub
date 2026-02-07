@@ -138,7 +138,7 @@ export default function AdminDocumentsPage() {
       (error) => {
         console.error("Error fetching resources:", error);
         setLoading(false);
-      }
+      },
     );
     return () => unsubscribe();
   }, []);
@@ -183,7 +183,7 @@ export default function AdminDocumentsPage() {
         const folder = newVisibility === "ADMIN" ? "admin-docs" : "library";
         const storageRef = ref(
           storage,
-          `${folder}/${Date.now()}_${selectedFile.name}`
+          `${folder}/${Date.now()}_${selectedFile.name}`,
         );
         const snapshot = await uploadBytes(storageRef, selectedFile);
         finalUrl = await getDownloadURL(snapshot.ref);
@@ -240,7 +240,7 @@ export default function AdminDocumentsPage() {
   const filteredResources = resources.filter(
     (r) =>
       r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.description.toLowerCase().includes(searchTerm.toLowerCase())
+      r.description.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (loading)
@@ -288,7 +288,8 @@ export default function AdminDocumentsPage() {
 
       {/* Resource Table */}
       <div className='bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm'>
-        <div className='overflow-x-auto'>
+        {/* Desktop Table */}
+        <div className='hidden md:block overflow-x-auto'>
           <table className='w-full text-left border-collapse min-w-[800px]'>
             <thead className='bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase font-semibold'>
               <tr>
@@ -387,12 +388,80 @@ export default function AdminDocumentsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Card View */}
+        <div className='md:hidden space-y-4 p-4'>
+          {filteredResources.length === 0 ? (
+            <div className='text-center py-8 text-slate-500'>
+              No documents found.
+            </div>
+          ) : (
+            filteredResources.map((item) => (
+              <div
+                key={item.id}
+                className='bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm'
+              >
+                <div className='flex justify-between items-start mb-3'>
+                  <div className='flex items-center gap-3'>
+                    <div className='p-2 rounded-lg bg-slate-50 dark:bg-slate-800'>
+                      <TypeIcon type={item.type} />
+                    </div>
+                    <div>
+                      <div className='font-medium text-slate-900 dark:text-white line-clamp-1'>
+                        {item.title}
+                      </div>
+                      <div className='flex items-center gap-2 mt-1'>
+                        <CategoryBadge category={item.category} />
+                      </div>
+                    </div>
+                  </div>
+                  <VisibilityBadge visibility={item.visibility} />
+                </div>
+
+                {item.description && (
+                  <p className='text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2'>
+                    {item.description}
+                  </p>
+                )}
+
+                <div className='flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3'>
+                  <div className='flex gap-2'>
+                    <button
+                      onClick={() => openEditModal(item)}
+                      className='p-2 text-slate-400 hover:text-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors'
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className='p-2 text-slate-400 hover:text-red-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors'
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  {item.type !== "TEXT" && (
+                    <a
+                      href={item.url}
+                      target='_blank'
+                      rel='noreferrer'
+                      className='flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg text-xs font-medium'
+                    >
+                      {item.type === "FILE" ? "Download" : "Visit Link"}
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
-          <div className='bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 max-h-[90vh] overflow-y-auto'>
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200'>
+          <div className='bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 max-h-[85vh] overflow-y-auto'>
             <div className='flex justify-between items-center mb-6'>
               <h2 className='text-xl font-bold text-slate-900 dark:text-white'>
                 {editId ? "Edit Resource" : "Add Resource"}
@@ -480,8 +549,8 @@ export default function AdminDocumentsPage() {
                   {newType === "FILE"
                     ? "Upload File"
                     : newType === "TEXT"
-                    ? "Content"
-                    : "URL"}
+                      ? "Content"
+                      : "URL"}
                 </label>
 
                 {newType === "FILE" ? (
@@ -505,7 +574,7 @@ export default function AdminDocumentsPage() {
                         type='file'
                         onChange={(e) =>
                           setSelectedFile(
-                            e.target.files ? e.target.files[0] : null
+                            e.target.files ? e.target.files[0] : null,
                           )
                         }
                         className='hidden'
@@ -520,8 +589,8 @@ export default function AdminDocumentsPage() {
                           {selectedFile
                             ? selectedFile.name
                             : editId && newUrl
-                            ? "Change File (Optional)"
-                            : "Click to select file"}
+                              ? "Change File (Optional)"
+                              : "Click to select file"}
                         </span>
                       </label>
                     </div>
@@ -577,8 +646,8 @@ export default function AdminDocumentsPage() {
                   {submitting
                     ? "Saving..."
                     : editId
-                    ? "Save Changes"
-                    : "Add Resource"}
+                      ? "Save Changes"
+                      : "Add Resource"}
                 </button>
               </div>
             </form>

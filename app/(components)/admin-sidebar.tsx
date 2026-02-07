@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 
-const adminRoutes = [
+export const adminRoutes = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Members", href: "/admin/users", icon: Users },
   { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
@@ -35,7 +35,7 @@ export function AdminSidebar() {
   };
 
   return (
-    <div className='flex h-screen w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950'>
+    <div className='hidden md:flex h-screen w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950'>
       {/* Header */}
       <div className='flex h-16 items-center border-b border-slate-200 px-6 dark:border-slate-800'>
         <span className='text-lg font-bold text-slate-900 dark:text-white'>
@@ -57,7 +57,7 @@ export function AdminSidebar() {
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white",
               )}
             >
               <Icon className='h-4 w-4' />
