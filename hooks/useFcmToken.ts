@@ -48,12 +48,25 @@ export default function useFcmToken() {
 
   // 1. Initial Permission Check
   // 1. Initial Permission Check & Token Retrieval
+  // 1. Initial Permission Check & Token Retrieval
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       // Clear app badge
-      if ("setAppBadge" in navigator) {
-        navigator.setAppBadge(0).catch((e) => console.log("Badge error", e));
-      }
+      const clearBadge = () => {
+        if ("setAppBadge" in navigator) {
+          navigator.setAppBadge(0).catch((e) => console.log("Badge error", e));
+        }
+      };
+
+      // Clear on mount
+      clearBadge();
+
+      // Clear when app comes to foreground
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          clearBadge();
+        }
+      });
 
       const perm = Notification.permission;
       setPermission(perm);
