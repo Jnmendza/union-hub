@@ -14,6 +14,12 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Alata } from "next/font/google";
+
+const alata = Alata({
+  subsets: ["latin"],
+  weight: "400",
+});
 
 export default function LandingPage() {
   const router = useRouter();
@@ -24,10 +30,15 @@ export default function LandingPage() {
       <nav className='fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md'>
         <div className='max-w-7xl mx-auto px-6 h-16 flex items-center justify-between'>
           <div className='flex items-center gap-2'>
-            <div className='w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center font-bold text-lg text-white shadow-lg'>
-              U
-            </div>
-            <span className='font-bold text-lg tracking-tight text-white'>
+            {/* Logo */}
+            <img
+              src='https://firebasestorage.googleapis.com/v0/b/union-hub-3d772.firebasestorage.app/o/landing%2FUH-transparent.png?alt=media&token=c5c24033-92c0-400d-a562-3918906a7f57'
+              alt='Union Hub Logo'
+              className='w-10 h-10 object-contain'
+            />
+            <span
+              className={`${alata.className} font-extrabold text-lg tracking-tight text-white uppercase`}
+            >
               Union Hub
             </span>
           </div>
