@@ -2,14 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Shield,
-  MessageSquare,
-  Users,
-  Zap,
-  Flame,
-  ArrowRight,
-} from "lucide-react";
+import { Shield, MessageSquare, Users, Zap, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Logo } from "@/components/ui/logo";
@@ -76,13 +69,15 @@ export default function LandingPage() {
         <div className='absolute inset-0 z-10 bg-gradient-to-t from-[#050B14] via-transparent to-transparent' />
         <div className='absolute inset-0 z-10 bg-blue-900/20 mix-blend-overlay' />
 
-        <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-blue-400 text-xs font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700'>
-          <span className='relative flex h-2 w-2'>
-            <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75'></span>
-            <span className='relative inline-flex rounded-full h-2 w-2 bg-blue-500'></span>
-          </span>
-          v1.0 is now live for beta testing.
-        </div>
+        <div className='max-w-7xl mx-auto px-6 relative z-20 w-full'>
+          <div className='max-w-3xl'>
+            <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-blue-400 text-xs font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700'>
+              <span className='relative flex h-2 w-2'>
+                <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75'></span>
+                <span className='relative inline-flex rounded-full h-2 w-2 bg-blue-500'></span>
+              </span>
+              v1.0 is now live for beta testing.
+            </div>
 
             <h1 className='text-6xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100'>
               Rule The <br />
