@@ -32,17 +32,6 @@ export default function LandingPage() {
 
   return (
     <div className='min-h-screen bg-[#050B14] text-white selection:bg-blue-600/50 overflow-x-hidden font-sans'>
-      {/* --- STYLES FOR CUSTOM SPORTY ANIMATIONS --- */}
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 20s linear infinite;
-        }
-      `}</style>
-
       {/* --- NAVBAR --- */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#050B14]/90 backdrop-blur-xl border-b border-white/5 py-4" : "bg-transparent py-6"}`}
