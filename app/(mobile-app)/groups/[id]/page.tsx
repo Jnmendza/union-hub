@@ -22,15 +22,6 @@ export default function GroupDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { currentUnion } = useUnion();
-
-  // Smart Back Handler
-  const handleBack = () => {
-    if (window.history.length > 2) {
-      router.back();
-    } else {
-      router.push("/");
-    }
-  };
   const groupId = typeof params?.id === "string" ? params.id : "";
 
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -101,7 +92,7 @@ export default function GroupDetailPage() {
       <div className='flex flex-col h-screen bg-slate-50 dark:bg-slate-950 p-6 text-slate-900 dark:text-white text-center items-center justify-center'>
         <p>Group not found</p>
         <button
-          onClick={handleBack}
+          onClick={() => router.back()}
           className='mt-4 text-blue-500 hover:underline'
         >
           Go Back
@@ -116,7 +107,7 @@ export default function GroupDetailPage() {
         {/* Header */}
         <div className='bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 p-3 flex items-center gap-3 shrink-0'>
           <button
-            onClick={handleBack}
+            onClick={() => router.back()}
             className='p-2 -ml-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           >
             <ChevronLeft size={24} />
@@ -158,10 +149,10 @@ export default function GroupDetailPage() {
             className='w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-blue-500/20'
           >
             {joining ? (
-              "Joining..."
+              <span>Joining...</span>
             ) : (
               <>
-                <UserPlus size={20} /> Join Group
+                <UserPlus size={20} /> <span>Join Group</span>
               </>
             )}
           </button>
@@ -177,7 +168,7 @@ export default function GroupDetailPage() {
       {/* Header */}
       <div className='bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 p-3 flex items-center gap-3 shrink-0 z-10'>
         <button
-          onClick={handleBack}
+          onClick={() => router.back()}
           className='p-2 -ml-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors'
         >
           <ChevronLeft size={24} />

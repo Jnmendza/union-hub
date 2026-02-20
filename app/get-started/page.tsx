@@ -41,7 +41,6 @@ export default function GetStartedPage() {
     for (let i = 0; i < 6; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    // Format: PRE-123
     setSecretCode(`${result.substring(0, 3)}-${result.substring(3)}`);
   };
 
@@ -91,7 +90,7 @@ export default function GetStartedPage() {
       if (error instanceof Error) {
         setError(error.message);
       } else {
-        setError("An unexpected error occurred.");
+        setError("An unknown error occurred.");
       }
     } finally {
       setLoading(false);
@@ -122,16 +121,11 @@ export default function GetStartedPage() {
 
       localStorage.setItem("last_union_id", cleanJoinId);
       window.location.href = "/";
-    } catch (err) {
-      console.error("Error joining union:", err);
-
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        "code" in err &&
-        (err as { code: unknown }).code === "permission-denied"
-      ) {
-        setError("Access Denied. Code allows join?");
+    } catch (error) {
+      console.error("Error joining union:", error);
+      const err = error as { code?: string };
+      if (err.code === "permission-denied") {
+        setError("Access Denied. Ask the admin for permission.");
       } else {
         setError("Failed to join. Try again.");
       }
@@ -165,7 +159,6 @@ export default function GetStartedPage() {
           </p>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className='mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm text-center animate-in fade-in slide-in-from-top-2'>
             {error}
@@ -200,7 +193,11 @@ export default function GetStartedPage() {
               disabled={loading || !joinCode}
               className='w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700'
             >
-              {loading && joinCode ? "Joining..." : "Join Workspace"}
+              {loading && joinCode ? (
+                <span>Joining...</span>
+              ) : (
+                <span>Join Workspace</span>
+              )}
             </button>
           </form>
 
@@ -264,10 +261,10 @@ export default function GetStartedPage() {
               className='w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50'
             >
               {loading && name ? (
-                "Creating..."
+                <span>Creating...</span>
               ) : (
                 <>
-                  Create Workspace <ArrowRight size={18} />
+                  <span>Create Workspace</span> <ArrowRight size={18} />
                 </>
               )}
             </button>
