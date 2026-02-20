@@ -71,7 +71,7 @@ export default function LandingPage() {
             <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75'></span>
             <span className='relative inline-flex rounded-full h-2 w-2 bg-blue-500'></span>
           </span>
-          v1.0 is now live for beta testing
+          v1.0 is now live for beta testing.
         </div>
 
         <h1 className='text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60 animate-in fade-in slide-in-from-bottom-8 duration-1000'>
