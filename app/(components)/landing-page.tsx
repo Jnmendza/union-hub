@@ -87,12 +87,13 @@ export default function LandingPage() {
         <div className='absolute inset-0 z-10 bg-gradient-to-t from-[#050B14] via-transparent to-transparent' />
         <div className='absolute inset-0 z-10 bg-blue-900/20 mix-blend-overlay' />
 
-        <div className='relative z-20 max-w-7xl mx-auto px-6 w-full mt-12'>
-          <div className='max-w-3xl'>
-            <div className='inline-flex items-center gap-2 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-widest mb-6 border-l-4 border-white animate-in fade-in slide-in-from-left-8 duration-500'>
-              <Flame size={14} className='animate-pulse' /> The 2026 Beta is
-              Live
-            </div>
+        <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-blue-400 text-xs font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700'>
+          <span className='relative flex h-2 w-2'>
+            <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75'></span>
+            <span className='relative inline-flex rounded-full h-2 w-2 bg-blue-500'></span>
+          </span>
+          v1.0 is now live for beta testing.
+        </div>
 
             <h1 className='text-6xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100'>
               Rule The <br />
