@@ -105,7 +105,7 @@ export default function RegisterPage() {
     <div className='min-h-screen bg-slate-950 flex items-center justify-center p-6'>
       <div className='w-full max-w-sm'>
         <div className='text-center mb-8'>
-          <div className='w-16 h-16 bg-purple-600 rounded-full mx-auto flex items-center justify-center mb-4 shadow-xl shadow-purple-900/20'>
+          <div className='w-16 h-16 bg-blue-600 rounded-full mx-auto flex items-center justify-center mb-4 shadow-xl shadow-blue-900/20'>
             <User className='text-white w-8 h-8' />
           </div>
           <h1 className='text-2xl font-bold text-white mb-2'>Create Account</h1>
@@ -113,7 +113,7 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSignup} className='space-y-4'>
-          <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all'>
+          <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all'>
             <Mail className='text-slate-500 w-5 h-5 shrink-0' />
             <input
               type='email'
@@ -125,7 +125,7 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all'>
+          <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all'>
             <Lock className='text-slate-500 w-5 h-5 shrink-0' />
             <input
               type={showPassword ? "text" : "password"}
@@ -144,7 +144,7 @@ export default function RegisterPage() {
             </button>
           </div>
 
-          <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all'>
+          <div className='bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all'>
             <Lock className='text-slate-500 w-5 h-5 shrink-0' />
             <input
               type={showConfirm ? "text" : "password"}
@@ -168,7 +168,7 @@ export default function RegisterPage() {
               className={`bg-slate-900 border rounded-xl px-4 py-3 flex flex-col gap-1 transition-all ${
                 dobError
                   ? "border-red-500 ring-1 ring-red-500"
-                  : "border-slate-800 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500"
+                  : "border-slate-800 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
               }`}
             >
               <label
@@ -200,15 +200,15 @@ export default function RegisterPage() {
               id='eula'
               checked={eulaAgreed}
               onChange={(e) => setEulaAgreed(e.target.checked)}
-              className='mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900 text-purple-600 focus:ring-purple-500'
+              className='mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-blue-500'
             />
             <label htmlFor='eula' className='text-sm text-slate-400'>
               I agree to the{" "}
-              <Link href='/eula' className='text-purple-400 hover:underline'>
+              <Link href='/eula' className='text-blue-400 hover:underline'>
                 End User License Agreement (EULA)
               </Link>{" "}
               and the{" "}
-              <Link href='/privacy' className='text-purple-400 hover:underline'>
+              <Link href='/privacy' className='text-blue-400 hover:underline'>
                 Privacy Policy
               </Link>
               . I confirm that I am at least 18 years old.
@@ -243,7 +243,7 @@ export default function RegisterPage() {
           <button
             type='submit'
             disabled={loading || !isFormValid}
-            className='w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-900/20 mt-2 flex items-center justify-center gap-2'
+            className='w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20 mt-2 flex items-center justify-center gap-2'
           >
             {loading ? <Loader2 size={20} className='animate-spin' /> : null}
             {loading ? "Creating account..." : "Sign Up"}
@@ -254,7 +254,7 @@ export default function RegisterPage() {
           Already have an account?{" "}
           <Link
             href='/login'
-            className='text-purple-500 font-bold hover:underline'
+            className='text-blue-500 font-bold hover:underline'
           >
             Log in
           </Link>

@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getToken, onMessage, getMessaging } from "firebase/messaging";
+import {
+  getToken,
+  onMessage,
+  getMessaging,
+  isSupported,
+} from "firebase/messaging";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth, app } from "@/lib/firebase";
 
@@ -11,6 +16,12 @@ export default function useFcmToken() {
 
   const retrieveToken = async () => {
     try {
+      const supported = await isSupported();
+      if (!supported) {
+        console.log("Firebase Messaging is not supported in this browser.");
+        return;
+      }
+
       const messaging = getMessaging(app);
       const currentToken = await getToken(messaging, {
         vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
@@ -35,6 +46,11 @@ export default function useFcmToken() {
     }
 
     try {
+      if (!("Notification" in window)) {
+        console.log("This browser does not support desktop notification");
+        return;
+      }
+
       const perm = await Notification.requestPermission();
       setPermission(perm);
 
@@ -68,11 +84,20 @@ export default function useFcmToken() {
         }
       });
 
-      const perm = Notification.permission;
-      setPermission(perm);
-      if (perm === "granted") {
-        retrieveToken();
-      }
+      const checkPermission = async () => {
+        // Wait for the next microtask to avoid a synchronous cascading render
+        await Promise.resolve();
+        const perm =
+          "Notification" in window ? Notification.permission : "default";
+
+        setPermission(perm as NotificationPermission);
+
+        if (perm === "granted") {
+          retrieveToken();
+        }
+      };
+
+      checkPermission();
     }
   }, []);
 
@@ -104,19 +129,33 @@ export default function useFcmToken() {
 
   // 3. Listen for Foreground Messages
   useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      try {
-        const messaging = getMessaging(app);
-        const unsubscribe = onMessage(messaging, (payload) => {
-          console.log("Foreground message received:", payload);
-          // You can show a toast here using your UI library
-          // toast(payload.notification?.title, payload.notification?.body)
-        });
-        return () => unsubscribe();
-      } catch (error) {
-        console.log("Error checking for foreground messages:", error);
+    let unsubscribe: (() => void) | undefined;
+
+    const setupMessaging = async () => {
+      if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+        try {
+          const supported = await isSupported();
+          if (!supported) return;
+
+          const messaging = getMessaging(app);
+          unsubscribe = onMessage(messaging, (payload) => {
+            console.log("Foreground message received:", payload);
+            // You can show a toast here using your UI library
+            // toast(payload.notification?.title, payload.notification?.body)
+          });
+        } catch (error) {
+          console.log("Error checking for foreground messages:", error);
+        }
       }
-    }
+    };
+
+    setupMessaging();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   return { token, permission, requestPermission };

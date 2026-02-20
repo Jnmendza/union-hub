@@ -1,324 +1,303 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Shield,
   MessageSquare,
-  FolderOpen,
-  QrCode,
-  ChevronRight,
   Users,
-  Lock,
   Zap,
+  Flame,
+  ArrowRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Alata } from "next/font/google";
-
-const alata = Alata({
-  subsets: ["latin"],
-  weight: "400",
-});
+import Image from "next/image";
+import { Logo } from "@/components/ui/logo";
 
 export default function LandingPage() {
   const router = useRouter();
+  const [scrolled, setScrolled] = useState(false);
+
+  // Handle scroll for navbar styling
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const heroImage =
+    "https://firebasestorage.googleapis.com/v0/b/union-hub-live.firebasestorage.app/o/landing%2Fhero3.png?alt=media&token=132bf9c5-b36a-4c69-a029-c2931c126334";
 
   return (
-    <div className='min-h-screen bg-[#020617] text-white selection:bg-blue-500/30 overflow-x-hidden font-sans'>
+    <div className='min-h-screen bg-[#050B14] text-white selection:bg-blue-600/50 overflow-x-hidden font-sans'>
+      {/* --- STYLES FOR CUSTOM SPORTY ANIMATIONS --- */}
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 20s linear infinite;
+        }
+      `}</style>
+
       {/* --- NAVBAR --- */}
-      <nav className='fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md'>
-        <div className='max-w-7xl mx-auto px-6 h-16 flex items-center justify-between'>
-          <div className='flex items-center gap-2'>
-            {/* Logo */}
-            <Image
-              src='https://firebasestorage.googleapis.com/v0/b/union-hub-3d772.firebasestorage.app/o/landing%2FUH-transparent.png?alt=media&token=c5c24033-92c0-400d-a562-3918906a7f57'
-              alt='Union Hub Logo'
-              width={40}
-              height={40}
-              className='w-10 h-10 object-contain'
-            />
-            <span
-              className={`${alata.className} font-extrabold text-lg tracking-tight text-white uppercase`}
-            >
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#050B14]/90 backdrop-blur-xl border-b border-white/5 py-4" : "bg-transparent py-6"}`}
+      >
+        <div className='max-w-7xl mx-auto px-6 flex items-center justify-between'>
+          <div className='flex items-center gap-1 cursor-pointer'>
+            <div className='rounded-lg flex items-center justify-center font-black text-xl text-white'>
+              <Logo width={50} height={50} priority />
+            </div>
+            <span className='hidden sm:inline font-black italic text-2xl tracking-tighter text-white uppercase'>
               Union Hub
             </span>
           </div>
-          <div className='flex items-center gap-4'>
+          <div className='flex items-center gap-4 sm:gap-6'>
             <Link
               href='/login'
-              className='text-sm font-medium text-slate-400 hover:text-white transition-colors'
+              className='text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition-colors'
             >
-              Sign In
+              Log In
             </Link>
-            <Link
-              href='/register'
-              className='bg-white text-slate-950 px-4 py-2 rounded-full text-sm font-bold hover:bg-slate-200 transition-all active:scale-95'
+            <button
+              onClick={() => router.push("/register")}
+              className='bg-white text-black px-4 py-2 sm:px-6 sm:py-2.5 rounded-none font-black uppercase tracking-wider text-xs sm:text-sm hover:bg-blue-500 hover:text-white transition-all transform hover:-translate-y-1 active:translate-y-0 cursor-pointer'
             >
-              Get Started
-            </Link>
+              Start Union
+            </button>
           </div>
         </div>
       </nav>
 
       {/* --- HERO SECTION --- */}
-      <section className='relative pt-32 pb-20 md:pt-48 md:pb-32 px-6 max-w-7xl mx-auto text-center'>
-        {/* Glow Effect */}
-        <div className='absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] -z-10 pointer-events-none' />
+      <section className='relative min-h-[90vh] flex items-center pt-20 pb-20 [clip-path:polygon(0_0,100%_0,100%_85%,0%_100%)]'>
+        {/* Background Image (Generated via Gemini) */}
+        <div
+          className='absolute inset-0 z-0 bg-cover bg-center'
+          style={{
+            backgroundImage: `url(${heroImage})`,
+          }}
+        />
+        {/* Aggressive Gradient Overlays */}
+        <div className='absolute inset-0 z-10 bg-gradient-to-r from-[#050B14] via-[#050B14]/80 to-transparent' />
+        <div className='absolute inset-0 z-10 bg-gradient-to-t from-[#050B14] via-transparent to-transparent' />
+        <div className='absolute inset-0 z-10 bg-blue-900/20 mix-blend-overlay' />
 
-        <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-blue-400 text-xs font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700'>
-          <span className='relative flex h-2 w-2'>
-            <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75'></span>
-            <span className='relative inline-flex rounded-full h-2 w-2 bg-blue-500'></span>
-          </span>
-          v1.0 is now live for beta testing
-        </div>
+        <div className='relative z-20 max-w-7xl mx-auto px-6 w-full mt-12'>
+          <div className='max-w-3xl'>
+            <div className='inline-flex items-center gap-2 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-widest mb-6 border-l-4 border-white animate-in fade-in slide-in-from-left-8 duration-500'>
+              <Flame size={14} className='animate-pulse' /> The 2026 Beta is
+              Live
+            </div>
 
-        <h1 className='text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60 animate-in fade-in slide-in-from-bottom-8 duration-1000'>
-          The Operating System <br className='hidden md:block' />
-          for <span className='text-blue-500'>Supporters Groups</span>.
-        </h1>
+            <h1 className='text-6xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100'>
+              Rule The <br />
+              <span className='text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600'>
+                Terrace.
+              </span>
+            </h1>
 
-        <p className='text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100'>
-          Stop managing your union on WhatsApp and Google Drive. Union Hub
-          brings secure chat, verified digital IDs, and a resource vault into
-          one powerful app.
-        </p>
+            <p className='text-lg md:text-xl text-slate-300 max-w-xl mb-10 leading-relaxed font-medium animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200'>
+              Ditch the chaotic WhatsApp groups. Build a digital clubhouse with
+              secure chat, verified member IDs, and a matchday command center.
+            </p>
 
-        <div className='flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200'>
-          <Link
-            href='/register'
-            className='w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-lg transition-all shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_0_60px_-10px_rgba(37,99,235,0.6)]'
-          >
-            Create Workspace
-          </Link>
-          <Link
-            href='#features'
-            className='w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 group'
-          >
-            See Features{" "}
-            <ChevronRight
-              className='group-hover:translate-x-1 transition-transform'
-              size={20}
-            />
-          </Link>
+            <div className='flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300'>
+              <button
+                onClick={() => router.push("/register")}
+                className='w-full sm:w-auto px-8 py-5 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-lg flex items-center justify-center gap-3 group transition-all'
+              >
+                Claim Your Workspace
+                <ArrowRight
+                  size={20}
+                  className='group-hover:translate-x-2 transition-transform'
+                />
+              </button>
+              <Link
+                href='#features'
+                className='w-full sm:w-auto px-8 py-5 bg-transparent border-2 border-white/20 hover:border-white text-white font-bold uppercase tracking-widest text-sm transition-all text-center'
+              >
+                View Playbook
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* --- APP SCREENSHOTS SECTION --- */}
-      <section className='px-6 py-24 bg-gradient-to-b from-[#020617] to-[#0B1120]'>
-        <div className='max-w-7xl mx-auto'>
-          <div className='text-center mb-16'>
-            <h2 className='text-3xl md:text-5xl font-bold mb-4'>
-              Built for the matchday experience.
+      {/* --- MARQUEE DIVIDER --- */}
+      <div className='w-full bg-blue-600 py-4 overflow-hidden -rotate-1 transform origin-left -mt-10 relative z-30 border-y-4 border-black'>
+        <div className='flex w-max animate-marquee text-black font-black uppercase tracking-widest text-xl opacity-80'>
+          <span className='pr-8 whitespace-nowrap'>
+            BUILT FOR THE STANDS • VERIFIED MEMBERS ONLY • NO RIVAL INFILTRATION
+            • REAL-TIME MATCHDAY UPDATES • BUILT FOR THE STANDS • VERIFIED
+            MEMBERS ONLY • NO RIVAL INFILTRATION • REAL-TIME MATCHDAY UPDATES •
+          </span>
+          {/* Duplicate for seamless loop */}
+          <span className='pr-8 whitespace-nowrap'>
+            BUILT FOR THE STANDS • VERIFIED MEMBERS ONLY • NO RIVAL INFILTRATION
+            • REAL-TIME MATCHDAY UPDATES • BUILT FOR THE STANDS • VERIFIED
+            MEMBERS ONLY • NO RIVAL INFILTRATION • REAL-TIME MATCHDAY UPDATES •
+          </span>
+        </div>
+      </div>
+
+      {/* --- DYNAMIC APP SCREENSHOTS --- */}
+      <section className='py-32 relative overflow-hidden bg-[#050B14]'>
+        <div className='max-w-7xl mx-auto px-6 relative z-10'>
+          <div className='text-center mb-20'>
+            <h2 className='text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4'>
+              The Matchday <span className='text-blue-500'>Arsenal</span>.
             </h2>
-            <p className='text-slate-400 text-lg'>
-              Powerful enough for admins, simple enough for the stands.
+            <p className='text-slate-400 text-lg md:text-xl font-medium max-w-2xl mx-auto'>
+              Built to handle the noise of 90 minutes.
             </p>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
-            {/* Screenshot 1: Chat */}
-            <div className='bg-slate-900 border border-white/5 rounded-[2rem] p-4 shadow-2xl hover:border-blue-500/30 transition-all duration-500 group'>
-              <div className='relative aspect-[9/19] rounded-[1.5rem] overflow-hidden bg-slate-950 border border-slate-800'>
-                {/* Fallback Placeholder until real screenshot */}
-                <div className='absolute inset-0 flex items-center justify-center bg-slate-900'>
-                  <div className='text-center opacity-50'>
-                    <MessageSquare
-                      size={48}
-                      className='mx-auto mb-2 text-blue-500'
-                    />
-                    <span className='text-sm font-mono text-blue-200'>
-                      CHAT_PREVIEW.PNG
-                    </span>
-                  </div>
-                </div>
-                {/* Replace this with real screenshot later */}
-
+          <div className='flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-4 perspective-[1000px]'>
+            {/* Screenshot 1: Left */}
+            <div className='w-full max-w-[320px] aspect-[9/19] bg-gradient-to-br from-slate-800 to-black rounded-3xl p-2 border border-slate-700 transform lg:rotate-y-12 lg:-translate-x-12 hover:rotate-y-0 hover:translate-x-0 transition-all duration-500 shadow-2xl group relative z-10'>
+              <div className='w-full h-full bg-[#0a0f1a] rounded-[1.2rem] overflow-hidden relative border border-white/10'>
                 <Image
-                  src={`https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/landing%2Fchat.png?alt=media&token=1fa0d472-885b-414f-aa4d-da306bbe2c18`}
+                  src='https://firebasestorage.googleapis.com/v0/b/union-hub-live.firebasestorage.app/o/landing%2Fchat.png?alt=media&token=4aa681de-79fd-4245-8349-9d1825dbccc6'
                   alt='Chat UI'
                   fill
                   className='object-cover'
                 />
-                <div className='absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-slate-900 to-transparent'></div>
-              </div>
-              <div className='text-center mt-6 mb-2'>
-                <h3 className='text-xl font-bold text-white mb-1'>
-                  Organized Chaos
-                </h3>
-                <p className='text-slate-400 text-sm px-4'>
-                  Dedicated channels for leadership, drums, and tifo crews.
-                </p>
               </div>
             </div>
 
-            {/* Screenshot 2: Home Feed (Center/Larger) */}
-            <div className='bg-slate-900 border border-blue-500/20 rounded-[2rem] p-4 shadow-[0_0_50px_-20px_rgba(37,99,235,0.3)] transform md:-translate-y-12 z-10 relative mt-6'>
-              <div className='absolute -top-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border border-blue-400 shadow-lg'>
-                FAN FAVORITE
+            {/* Screenshot 2: Center (Hero) */}
+            <div className='w-full max-w-[360px] aspect-[9/19] bg-gradient-to-br from-blue-600 to-blue-900 rounded-3xl p-2 border border-blue-400 transform hover:-translate-y-4 transition-all duration-500 shadow-[0_0_50px_rgba(37,99,235,0.3)] group relative z-20'>
+              <div className='absolute -top-5 left-1/2 -translate-x-1/2 bg-white text-black text-xs font-black uppercase tracking-widest px-4 py-1 border-2 border-black z-10'>
+                Command Center
               </div>
-              <div className='relative aspect-[9/19] rounded-[1.5rem] overflow-hidden bg-slate-950 border border-slate-800'>
-                <div className='absolute inset-0 flex items-center justify-center bg-slate-900'>
-                  <div className='text-center opacity-50'>
-                    <Zap size={48} className='mx-auto mb-2 text-yellow-500' />
-                    <span className='text-sm font-mono text-yellow-200'>
-                      HOME_FEED.PNG
-                    </span>
-                  </div>
-                </div>
+              <div className='w-full h-full bg-[#050B14] rounded-[1.2rem] overflow-hidden relative border border-blue-500/30'>
                 <Image
-                  src={`https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/landing%2Fhome.jpeg?alt=media&token=93a59859-f0a7-408e-bf11-7cf7d2b682c5`}
+                  src='https://firebasestorage.googleapis.com/v0/b/union-hub-live.firebasestorage.app/o/landing%2Fhome.png?alt=media&token=6febc6f9-d68d-4760-9f4c-59e7248eb784'
                   alt='Home UI'
                   fill
                   className='object-cover'
                 />
               </div>
-              <div className='text-center mt-6 mb-2'>
-                <h3 className='text-xl font-bold text-white mb-1'>
-                  Command Center
-                </h3>
-                <p className='text-slate-400 text-sm px-4'>
-                  Urgent announcements and event updates, front and center.
-                </p>
-              </div>
             </div>
 
-            {/* Screenshot 3: ID Card */}
-            <div className='bg-slate-900 border border-white/5 rounded-[2rem] p-4 shadow-2xl hover:border-purple-500/30 transition-all duration-500 group'>
-              <div className='relative aspect-[9/19] rounded-[1.5rem] overflow-hidden bg-slate-950 border border-slate-800'>
-                <div className='absolute inset-0 flex items-center justify-center bg-slate-900'>
-                  <div className='text-center opacity-50'>
-                    <QrCode
-                      size={48}
-                      className='mx-auto mb-2 text-purple-500'
-                    />
-                    <span className='text-sm font-mono text-purple-200'>
-                      DIGITAL_ID.PNG
-                    </span>
-                  </div>
-                </div>
+            {/* Screenshot 3: Right */}
+            <div className='w-full max-w-[320px] aspect-[9/19] bg-gradient-to-bl from-slate-800 to-black rounded-3xl p-2 border border-slate-700 transform lg:-rotate-y-12 lg:translate-x-12 hover:rotate-y-0 hover:translate-x-0 transition-all duration-500 shadow-2xl group relative z-10'>
+              <div className='w-full h-full bg-[#0a0f1a] rounded-[1.2rem] overflow-hidden relative border border-white/10'>
                 <Image
-                  src={`https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/landing%2Fid.jpeg?alt=media&token=0707ead4-0a9e-4237-8170-5b399b2990d3`}
+                  src='https://firebasestorage.googleapis.com/v0/b/union-hub-live.firebasestorage.app/o/landing%2Fid.png?alt=media&token=a9175a44-cd1e-4ee0-a075-f51f4ddaf951'
                   alt='ID UI'
                   fill
                   className='object-cover'
                 />
-                <div className='absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-slate-900 to-transparent'></div>
-              </div>
-              <div className='text-center mt-6 mb-2'>
-                <h3 className='text-xl font-bold text-white mb-1'>
-                  Verified Membership
-                </h3>
-                <p className='text-slate-400 text-sm px-4'>
-                  Digital ID cards with QR verification to gatekeep your events.
-                </p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* --- BENTO GRID FEATURES --- */}
-      <section id='features' className='px-6 py-24 max-w-7xl mx-auto'>
-        <h2 className='text-3xl font-bold text-center mb-16'>
-          Everything you need to lead.
-        </h2>
-
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-          {/* Card 1: Chat (Large) */}
-          <div className='md:col-span-2 bg-gradient-to-br from-slate-900 to-slate-900/50 border border-white/10 rounded-3xl p-8 relative overflow-hidden group'>
-            <div className='absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-30 transition-opacity'>
-              <MessageSquare size={120} />
-            </div>
-            <div className='relative z-10'>
-              <div className='w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-400 mb-6'>
-                <Users size={24} />
-              </div>
-              <h3 className='text-2xl font-bold mb-2'>
-                Real-Time Chaos Control
+      {/* --- AGGRESSIVE FEATURES GRID --- */}
+      <section
+        id='features'
+        className='py-24 bg-[#08101C] border-t border-white/5 [clip-path:polygon(0_15%,100%_0,100%_100%,0%_100%)] pt-40'
+      >
+        <div className='max-w-7xl mx-auto px-6'>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+            {/* Feature 1 */}
+            <div className='bg-[#050B14] border-l-4 border-blue-500 p-8 hover:bg-slate-900 transition-colors group'>
+              <Shield className='text-blue-500 w-12 h-12 mb-6 group-hover:scale-110 transition-transform' />
+              <h3 className='text-2xl font-black uppercase tracking-tight mb-3'>
+                Lock Down The Culture
               </h3>
-              <p className='text-slate-400 max-w-md'>
-                Dedicated channels for your leadership, tifo crew, and general
-                members. Keep the noise out and the passion in.
+              <p className='text-slate-400 font-medium'>
+                Enterprise-grade security meets the terraces. Issue digital
+                membership cards with QR codes to gatekeep tailgates and private
+                chats. No rivals allowed.
               </p>
             </div>
-          </div>
 
-          {/* Card 2: Vault */}
-          <div className='bg-slate-900 border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-blue-500/30 transition-colors'>
-            <div className='w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center text-purple-400 mb-6'>
-              <FolderOpen size={24} />
-            </div>
-            <h3 className='text-xl font-bold mb-2'>The Vault</h3>
-            <p className='text-slate-400 text-sm'>
-              Store bylaws, chant sheets, and assets in one secure place. No
-              more &quot;Can someone resend the PDF?&quot;
-            </p>
-          </div>
-
-          {/* Card 3: ID */}
-          <div className='bg-slate-900 border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-blue-500/30 transition-colors'>
-            <div className='w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400 mb-6'>
-              <QrCode size={24} />
-            </div>
-            <h3 className='text-xl font-bold mb-2'>Digital Membership</h3>
-            <p className='text-slate-400 text-sm'>
-              Issue verified Digital IDs with QR codes. Prevent infiltration and
-              manage dues status instantly.
-            </p>
-          </div>
-
-          {/* Card 4: Security (Large) */}
-          <div className='md:col-span-2 bg-gradient-to-br from-slate-900 to-slate-900/50 border border-white/10 rounded-3xl p-8 relative overflow-hidden group'>
-            <div className='absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-30 transition-opacity'>
-              <Shield size={120} />
-            </div>
-            <div className='relative z-10'>
-              <div className='w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center text-orange-400 mb-6'>
-                <Lock size={24} />
-              </div>
-              <h3 className='text-2xl font-bold mb-2'>
-                Enterprise-Grade Security
+            {/* Feature 2 */}
+            <div className='bg-[#050B14] border-l-4 border-white p-8 hover:bg-slate-900 transition-colors group'>
+              <Zap className='text-white w-12 h-12 mb-6 group-hover:scale-110 transition-transform' />
+              <h3 className='text-2xl font-black uppercase tracking-tight mb-3'>
+                Cut Through The Noise
               </h3>
-              <p className='text-slate-400 max-w-md'>
-                Your data is isolated. Rivals can&apos;t see your chats,
-                members, or plans. Built on Google Firebase security
-                infrastructure.
+              <p className='text-slate-400 font-medium'>
+                When the march starts, people need to know. Pin urgent
+                announcements to the top of everyone&apos;s feed with push
+                notifications.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className='bg-[#050B14] border-l-4 border-slate-600 p-8 hover:bg-slate-900 transition-colors group'>
+              <MessageSquare className='text-slate-400 w-12 h-12 mb-6 group-hover:text-white transition-colors' />
+              <h3 className='text-2xl font-black uppercase tracking-tight mb-3'>
+                Segment The Squad
+              </h3>
+              <p className='text-slate-400 font-medium'>
+                Keep the drumline chatter out of the main feed. Create
+                dedicated, role-based chat channels for leadership, capos, and
+                general members.
+              </p>
+            </div>
+
+            {/* Feature 4 */}
+            <div className='bg-[#050B14] border-l-4 border-blue-500 p-8 hover:bg-slate-900 transition-colors group'>
+              <Users className='text-blue-500 w-12 h-12 mb-6 group-hover:scale-110 transition-transform' />
+              <h3 className='text-2xl font-black uppercase tracking-tight mb-3'>
+                The Digital Vault
+              </h3>
+              <p className='text-slate-400 font-medium'>
+                Stop asking &quot;does anyone have the chant sheet?&quot; Store
+                bylaws, songs, and matchday PDFs in a centralized, read-only
+                vault for all members.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* --- FOOTER CTA --- */}
-      <section className='px-6 pb-20'>
-        <div className='max-w-4xl mx-auto bg-blue-600 rounded-3xl p-12 text-center relative overflow-hidden'>
-          {/* Decorative Circles */}
-          <div className='absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2'></div>
-          <div className='absolute bottom-0 right-0 w-64 h-64 bg-black/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2'></div>
+      {/* --- FOOTER / FINAL CTA --- */}
+      <section className='py-24 relative overflow-hidden'>
+        {/* Massive background text */}
+        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center opacity-5 pointer-events-none select-none'>
+          <h1 className='text-[15vw] font-black uppercase tracking-tighter whitespace-nowrap'>
+            UNION HUB
+          </h1>
+        </div>
 
-          <h2 className='text-3xl md:text-4xl font-bold mb-6 relative z-10'>
-            Ready to organize your Union?
+        <div className='max-w-4xl mx-auto px-6 text-center relative z-10'>
+          <h2 className='text-5xl md:text-7xl font-black uppercase tracking-tighter mb-8 text-white'>
+            Ready For <span className='text-blue-600'>Kickoff?</span>
           </h2>
-          <p className='text-blue-100 mb-8 max-w-xl mx-auto relative z-10'>
-            Join the beta today. It&apos;s free for inaugural supporters groups.
+          <p className='text-xl text-slate-400 mb-10 font-medium'>
+            Join the beta today. Claim your union&apos;s namespace for the
+            upcoming season.
           </p>
-          <div className='relative z-10 flex flex-col sm:flex-row gap-4 justify-center'>
+
+          <div className='flex flex-col sm:flex-row justify-center gap-6'>
             <button
               onClick={() => router.push("/register")}
-              className='bg-white text-blue-600 px-8 py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors'
+              className='bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 font-black uppercase tracking-widest text-lg transition-transform transform hover:-translate-y-1 cursor-pointer'
             >
               Start Free Workspace
             </button>
-            <button className='bg-blue-700 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-800 transition-colors'>
-              Contact Sales
-            </button>
+            <a
+              href='mailto:contact@jonathanmendoza.dev'
+              className='bg-transparent border-2 border-slate-700 hover:border-white text-white px-10 py-5 font-bold uppercase tracking-widest transition-colors flex items-center justify-center'
+            >
+              Contact Developer
+            </a>
           </div>
         </div>
 
-        <div className='text-center mt-12 text-slate-600 text-sm'>
-          &copy; 2025 Union Hub. Built for the culture.
+        <div className='text-center mt-32 text-slate-600 text-sm font-bold uppercase tracking-widest'>
+          &copy; 2026 Union Hub. Built by the Culture.
         </div>
       </section>
     </div>
